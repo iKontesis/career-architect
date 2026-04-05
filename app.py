@@ -2,162 +2,212 @@ import streamlit as st
 import google.generativeai as genai
 import json
 
-# --- CONFIGURATION & STYLING ---
-st.set_page_config(page_title="Executive Portfolio Architect", page_icon="🛡️", layout="wide")
+# --- 1. CONFIGURATION & EXECUTUVE STYLING ---
+st.set_page_config(page_title="Career Strategy Architect", page_icon="🛡️", layout="wide")
 
-# CSS: Ensuring absolute visibility regardless of Browser Theme (Dark/Light)
+# The Nuclear CSS Option: High-Contrast Executive Dark Theme
 st.markdown("""
     <style>
-    /* Background and Global Text */
-    .main { background-color: #F8FAFC; }
+    /* Global App Background (Deep Navy) */
+    .stApp {
+        background-color: #0F172A !important;
+        color: #F8FAFC !important;
+    }
+
+    /* Sidebar (Solid Navy) */
+    section[data-testid="stSidebar"] {
+        background-color: #1E293B !important;
+        border-right: 1px solid #334155 !important;
+    }
+
+    /* Headers & Text Visibility */
+    h1, h2, h3, h4, h5, h6 {
+        color: #F8FAFC !important;
+        font-weight: 800 !important;
+    }
     
-    /* Force Labels (Επικεφαλίδες στα κουτάκια) to be Slate Blue */
-    label[data-testid="stWidgetLabel"] {
-        color: #1E293B !important;
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
+    label[data-testid="stWidgetLabel"] p {
+        color: #94A3B8 !important; 
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
     }
 
-    /* Sidebar Labels should be White */
-    section[data-testid="stSidebar"] label[data-testid="stWidgetLabel"] {
-        color: white !important;
-    }
-
-    /* Text areas: White background, Slate text */
+    /* Text Areas (Darker Slate with Light Text) */
     .stTextArea textarea { 
-        background-color: #FFFFFF !important; 
-        color: #0F172A !important; 
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 10px !important;
+        background-color: #1E293B !important; 
+        color: #F8FAFC !important; 
+        border: 1px solid #334155 !important;
+        border-radius: 12px !important;
+        font-family: 'Inter', sans-serif !important;
+        padding: 15px !important;
+    }
+    
+    .stTextArea textarea::placeholder {
+        color: #475569 !important;
     }
 
-    /* Sidebar Styling */
-    section[data-testid="stSidebar"] { 
-        background-color: #1A365D !important; 
+    /* Metrics (Large & Vibrant) */
+    [data-testid="stMetricValue"] {
+        color: #3B82F6 !important; 
+        font-weight: 800 !important;
     }
-    section[data-testid="stSidebar"] .stMarkdown p {
-        color: #E2E8F0 !important;
+    [data-testid="stMetricLabel"] {
+        color: #94A3B8 !important;
     }
 
-    /* Buttons */
+    /* Buttons (Executive Blue) */
     .stButton button { 
-        background-color: #1A365D !important; 
+        background-color: #3B82F6 !important; 
         color: white !important; 
+        border: none !important;
         border-radius: 8px !important;
         font-weight: bold !important;
-        padding: 0.6rem 2rem !important;
+        padding: 0.8rem 2.5rem !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
     }
-    
-    h1, h2, h3 { color: #1A365D !important; }
-    
+    .stButton button:hover {
+        background-color: #2563EB !important;
+        box-shadow: 0 0 20px rgba(59, 130, 246, 0.4) !important;
+        transform: translateY(-2px) !important;
+    }
+
+    /* Report Card (Glassmorphism effect) */
     .report-card { 
-        background-color: #FFFFFF; 
-        padding: 25px; 
-        border-radius: 15px; 
-        border-left: 5px solid #1A365D; 
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        color: #1E293B;
+        background-color: #1E293B !important; 
+        padding: 30px !important; 
+        border-radius: 20px !important; 
+        border: 1px solid #475569 !important;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5) !important;
+        color: #F8FAFC !important;
+        margin-top: 20px !important;
     }
+    
+    .stAlert {
+        background-color: #1E293B !important;
+        color: white !important;
+        border: 1px solid #334155 !important;
+    }
+
+    /* Clean UI: Hide default Streamlit elements */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- APP HEADER ---
-st.markdown("# 🛡️ CAREER STRATEGY **ARCHITECT**")
-st.markdown("### Universal Industry-Agnostic Audit & Generation")
-st.divider()
-
-# --- SIDEBAR ---
+# --- 2. SIDEBAR CONFIGURATION ---
 with st.sidebar:
-    st.markdown("## ⚙️ Configuration")
+    st.markdown("## ⚙️ SYSTEM SETTINGS")
     api_key = st.text_input("Gemini API Key", type="password", help="Enter your Google AI Studio API Key")
     if api_key:
         genai.configure(api_key=api_key)
-    st.info("Stateless processing: Your data remains private and is never stored.")
+    st.divider()
+    st.markdown("### 🛡️ PRIVACY PROTOCOL")
+    st.caption("This application performs stateless processing. No CV data or API keys are persisted or stored.")
 
-# --- INITIALIZING SESSION STATE ---
+# --- 3. APP HEADER ---
+st.markdown("# 🛡️ CAREER STRATEGY **ARCHITECT**")
+st.markdown("#### *High-Level Executive Decision Support System*")
+st.divider()
+
+# Initializing Session State
 if 'audit_json' not in st.session_state:
     st.session_state.audit_json = None
 
-# --- INPUT AREA ---
+# --- 4. INPUT INTERFACE ---
 col1, col2 = st.columns(2)
 with col1:
-    master_cv = st.text_area("📄 Master CV Content", height=300, placeholder="Paste the text source of your full experience...")
+    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350, placeholder="Paste your full professional history...")
 with col2:
-    job_desc = st.text_area("💼 Job Description", height=300, placeholder="Paste the requirements of the target role...")
+    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=350, placeholder="Paste the target role requirements...")
 
-# --- STAGE A: THE GATEKEEPER ---
+# --- 5. STAGE A: THE GATEKEEPER (AUDIT) ---
 if st.button("RUN STRATEGIC AUDIT"):
     if not api_key:
-        st.error("Missing API Key. Please provide it in the sidebar.")
+        st.error("SYSTEM ERROR: Missing API Key in Settings.")
     elif len(master_cv) < 50 or len(job_desc) < 50:
-        st.warning("Insufficient input. Please provide more context to proceed.")
+        st.warning("INPUT ERROR: Insufficient data to perform audit.")
     else:
-        with st.spinner("Executing Semantic Audit..."):
+        with st.spinner("EXECUTING SEMANTIC AUDIT..."):
             try:
-                # FIX: Using direct model name without 'models/' prefix
+                # Using base model names for maximum compatibility
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 audit_prompt = f"""
-                Analyze CV vs JD. Output ONLY a valid JSON object. No markdown, no text.
-                JSON Schema:
+                ### ROLE: THE CAREER STRATEGY ARCHITECT
+                Task: Perform a deep semantic audit between the CV and JD provided.
+                Rules: No Oxford commas. Industry-agnostic. No conversational text.
+                Output ONLY a valid JSON object matching this schema:
                 {{
                     "verdict": {{"level": "string", "score": number, "recommendation": "string"}},
                     "matrix": {{"hierarchy": number, "hard_skills": number, "evidence": number, "soft_skills": number}},
                     "missing": ["string"],
                     "pivot": "string"
                 }}
-                Rules: No Oxford commas. Industry-agnostic.
                 CV: {master_cv}
                 JD: {job_desc}
                 """
                 
                 response = model.generate_content(audit_prompt)
-                # Cleaning the output in case the model wraps it in ```json
-                raw_text = response.text.replace('```json', '').replace('```', '').strip()
-                st.session_state.audit_json = json.loads(raw_text)
+                clean_json = response.text.replace('```json', '').replace('```', '').strip()
+                st.session_state.audit_json = json.loads(clean_json)
                 st.rerun()
             except Exception as e:
-                st.error(f"Audit Error: {str(e)}")
+                st.error(f"AUDIT SYSTEM OFFLINE: {str(e)}")
 
-# --- DISPLAY RESULTS ---
+# --- 6. DISPLAY AUDIT DASHBOARD ---
 if st.session_state.audit_json:
     res = st.session_state.audit_json
-    st.markdown("## 📊 Strategic Intelligence Report")
+    st.markdown("## 📊 STRATEGIC INTELLIGENCE REPORT")
     
+    # Metrics Row
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Hierarchy", f"{res['matrix']['hierarchy']}%")
-    m2.metric("Skills", f"{res['matrix']['hard_skills']}%")
-    m3.metric("Evidence", f"{res['matrix']['evidence']}%")
-    m4.metric("Fit", f"{res['matrix']['soft_skills']}%")
+    m1.metric("HIERARCHY", f"{res['matrix']['hierarchy']}%")
+    m2.metric("HARD SKILLS", f"{res['matrix']['hard_skills']}%")
+    m3.metric("EVIDENCE", f"{res['matrix']['evidence']}%")
+    m4.metric("SOFT SKILLS", f"{res['matrix']['soft_skills']}%")
 
+    # Verdict Card
     st.markdown(f"""
     <div class="report-card">
-        <h3>Verdict: {res['verdict']['level']} (Score: {res['verdict']['score']}/100)</h3>
-        <p><strong>Strategy:</strong> {res['pivot']}</p>
-        <p><i>{res['verdict']['recommendation']}</i></p>
-        <p style="color: #64748B;"><strong>Critical Semantic Gaps:</strong> {", ".join(res['missing'])}</p>
+        <h2 style="margin-top:0;">VERDICT: {res['verdict']['level']} ({res['verdict']['score']}/100)</h2>
+        <p style="font-size: 1.2rem; color: #3B82F6;"><strong>STRATEGIC PIVOT:</strong> {res['pivot']}</p>
+        <p style="font-style: italic; color: #F8FAFC;">"{res['verdict']['recommendation']}"</p>
+        <p style="color: #94A3B8; font-weight: 600;">CRITICAL GAPS: {", ".join(res['missing'])}</p>
     </div>
     """, unsafe_allow_html=True)
 
     st.divider()
 
-    # --- STAGE B: THE ARCHITECT ---
+    # --- 7. STAGE B: THE ARCHITECT (GENERATION) ---
     if st.button("CONSTRUCT EXECUTIVE PORTFOLIO"):
-        with st.spinner("Synthesizing Executive Narrative..."):
+        with st.spinner("SYNTHESIZING NARRATIVE..."):
             try:
+                # Use Gemini Pro for higher quality text synthesis
                 model_pro = genai.GenerativeModel('gemini-1.5-pro')
                 
                 arch_prompt = f"""
-                You are THE CAREER ARCHITECT. Synthesize a high-impact, ATS-optimized CV and Cover Letter.
+                ### ROLE: THE CAREER ARCHITECT
+                Task: Generate a high-impact, ATS-optimized CV and Cover Letter based on the provided strategy.
                 Strategy: {res['pivot']}
-                Audit Results: {json.dumps(res)}
-                Master CV Data: {master_cv}
-                Constraints: Use years (2022-2025). NO Oxford commas. High-stakes executive tone.
+                Audit Intelligence: {json.dumps(res)}
+                Source Materials: {master_cv}
+                Constraints: Use years (2022-2025). NO Oxford commas. Professional Executive tone. Pure Markdown.
                 """
                 
-                final_res = model_pro.generate_content(arch_prompt)
-                st.markdown("## 🖋️ Tailor-Made Portfolio")
-                st.markdown(final_res.text)
-                st.download_button("Download Portfolio (TXT)", final_res.text, file_name="executive_portfolio.txt")
+                final_response = model_pro.generate_content(arch_prompt)
+                st.markdown("## 🖋️ TAILOR-MADE EXECUTIVE PORTFOLIO")
+                st.markdown(final_response.text)
+                
+                st.download_button(
+                    label="📥 DOWNLOAD PORTFOLIO (TXT)",
+                    data=final_response.text,
+                    file_name="executive_portfolio.txt",
+                    mime="text/plain"
+                )
             except Exception as e:
-                st.error(f"Synthesis Error: {str(e)}")
+                st.error(f"SYNTHESIS SYSTEM OFFLINE: {str(e)}")
