@@ -15,7 +15,9 @@ st.markdown("""
     .stApp { background-color: #0F172A; color: #F1F5F9; }
     section[data-testid="stSidebar"] { background-color: #1E293B; border-right: 1px solid #334155; }
     .stButton button { background-color: #2563EB; color: white; border-radius: 6px; font-weight: 700; }
-    .report-card { background-color: #1E293B; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+    .metric-label { font-size: 0.85rem !important; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stMetricValue { font-size: 2.2rem !important; font-weight: 800; }
+    .report-card { background-color: #1E293B; padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
     </style>
 """, unsafe_allow_html=True)
 
@@ -44,7 +46,7 @@ with st.sidebar:
     
     🔗 [LinkedIn](https://linkedin.com/in/ikontesis) | [𝕏](https://x.com/@ikontesis)
     
-    🛡️ Stateless Architecture | **v2.4.1**  
+    🛡️ Stateless Architecture | **v2.4.2**  
     Powered by Google GenAI SDK
     """)
 
@@ -143,7 +145,7 @@ JD:
                 else:
                     st.error(f"Audit failed: {str(e)[:250]}")
 
-# --- RESULTS DASHBOARD ---
+# --- EXECUTIVE DASHBOARD (v2.4.2) ---
 if st.session_state.audit_json:
     res = st.session_state.audit_json
     verdict = res.get("verdict", {})
@@ -151,14 +153,28 @@ if st.session_state.audit_json:
 
     st.markdown("## 📊 STRATEGIC INTELLIGENCE REPORT")
 
-    c1, c2, c3 = st.columns([1, 2, 1])
+    # 4 KPI Metrics
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("HIERARCHY", f"{matrix.get('hierarchy', 0)}%")
+    m2.metric("HARD SKILLS", f"{matrix.get('hard_skills', 0)}%")
+    m3.metric("EVIDENCE", f"{matrix.get('evidence', 0)}%")
+    m4.metric("SOFT SKILLS", f"{matrix.get('soft_skills', 0)}%")
 
-    with c1:
-        st.metric("Overall Match", f"{verdict.get('score', 0)}/100")
-        st.write(f"**Level:** {verdict.get('level', 'N/A')}")
-        st.write(f"**Recommendation:** {verdict.get('recommendation', 'N/A')}")
+    st.divider()
 
-    with c2:
+    # Main Executive Section
+    col_left, col_right = st.columns([2, 1])
+
+    with col_left:
+        # Verdict Card
+        st.markdown(f"""
+        <div class="report-card">
+            <h2 style="margin:0 0 15px 0; color:#60A5FA;">Verdict: <strong>{verdict.get('level', 'N/A')}</strong> ({verdict.get('score', 0)}/100)</h2>
+            <p style="color:#94A3B8; font-size:1.05rem;">{verdict.get('recommendation', 'N/A')}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Large Radar Chart
         categories = ['Hierarchy', 'Hard Skills', 'Evidence', 'Soft Skills']
         values = [
             matrix.get('hierarchy', 0),
@@ -166,28 +182,52 @@ if st.session_state.audit_json:
             matrix.get('evidence', 0),
             matrix.get('soft_skills', 0)
         ]
+
         fig = go.Figure(data=go.Scatterpolar(
-            r=values, theta=categories, fill='toself', line_color='#00ffcc'
+            r=values,
+            theta=categories,
+            fill='toself',
+            line_color='#00ffcc',
+            marker=dict(size=8)
         ))
+
         fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+            polar=dict(
+                radialaxis=dict(visible=True, range=[0, 100], gridcolor="#334155"),
+                bgcolor="#0F172A"
+            ),
+            title=dict(text="Semantic Alignment Radar", font=dict(size=20, color="#F1F5F9")),
             showlegend=False,
-            title="Semantic Alignment Radar",
-            template="plotly_dark"
+            height=620,
+            template="plotly_dark",
+            paper_bgcolor="#0F172A",
+            plot_bgcolor="#0F172A",
+            margin=dict(l=40, r=40, t=80, b=40)
         )
+
         st.plotly_chart(fig, use_container_width=True)
 
-    with c3:
-        st.subheader("Strategic Pivot")
-        st.info(res.get('pivot', 'N/A'))
+    with col_right:
+        # Strategic Pivot
+        st.markdown(f"""
+        <div class="report-card" style="height:100%;">
+            <h3 style="margin-top:0; color:#60A5FA;">Strategic Pivot</h3>
+            <p style="line-height:1.6; color:#E2E8F0;">{res.get('pivot', 'No strategic direction available.')}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    st.subheader("🔴 Critical Gaps")
+    # Critical Gaps
+    st.markdown("### 🔴 Critical Gaps")
     missing = res.get('missing', [])
     if missing:
-        st.write(", ".join(missing))
+        st.markdown(f"""
+        <div style="background-color:#1E293B; padding:20px; border-radius:12px; border:1px solid #F87171;">
+            {", ".join(missing)}
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.success("No major gaps detected.")
+        st.success("✅ No critical gaps detected.")
 
 # --- FOOTER ---
 st.divider()
-st.caption("Developed by Ioannis Kontesis • 100% Stateless • Your data is never stored • Powered by Gemini 3 Flash Preview")
+st.caption("Developed by Ioannis Kontesis • 100% Stateless • Your data is never stored • Powered by Gemini 3 Flash Preview • v2.4.2")
