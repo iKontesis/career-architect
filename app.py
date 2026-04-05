@@ -26,7 +26,6 @@ st.subheader("High-Fidelity Semantic Audit & Portfolio Synthesis")
 with st.sidebar:
     st.header("⚙️ ENGINE STATUS")
     
-    # Load secret
     api_key = st.secrets.get("GEMINI_API_KEY")
     
     if api_key and len(api_key) > 30:
@@ -67,7 +66,7 @@ st.divider()
 # --- AUDIT BUTTON ---
 if st.button("🚀 RUN STRATEGIC AUDIT", type="primary", use_container_width=True):
     if not api_key or len(api_key) < 30:
-        st.error("**System Error:** GEMINI_API_KEY is not configured in Streamlit Secrets. The owner must add it.")
+        st.error("**System Error:** GEMINI_API_KEY is not configured in Streamlit Secrets.")
     elif len(master_cv.strip()) < 150 or len(job_desc.strip()) < 150:
         st.warning("Please provide sufficient data for both CV and Job Description.")
     else:
@@ -116,7 +115,7 @@ JD:
                 }
 
                 response = client.models.generate_content(
-                    model="gemini-3-flash-preview",        # ← Σωστό μοντέλο από AI Studio
+                    model="gemini-3-flash-preview",
                     contents=audit_prompt,
                     config={
                         "response_mime_type": "application/json",
@@ -144,11 +143,50 @@ JD:
                 else:
                     st.error(f"Audit failed: {str(e)[:250]}")
 
-# --- RESULTS (όπως πριν) ---
+# --- RESULTS DASHBOARD ---
 if st.session_state.audit_json:
-    # ... (το ίδιο dashboard με radar chart που είχαμε πριν – μπορείς να το κρατήσεις ακριβώς όπως στο προηγούμενο version)
+    res = st.session_state.audit_json
+    verdict = res.get("verdict", {})
+    matrix = res.get("matrix", {})
 
-    # Για συντομία, βάλε εδώ το παλιό σου results block με metrics + radar + gaps + pivot
+    st.markdown("## 📊 STRATEGIC INTELLIGENCE REPORT")
+
+    c1, c2, c3 = st.columns([1, 2, 1])
+
+    with c1:
+        st.metric("Overall Match", f"{verdict.get('score', 0)}/100")
+        st.write(f"**Level:** {verdict.get('level', 'N/A')}")
+        st.write(f"**Recommendation:** {verdict.get('recommendation', 'N/A')}")
+
+    with c2:
+        categories = ['Hierarchy', 'Hard Skills', 'Evidence', 'Soft Skills']
+        values = [
+            matrix.get('hierarchy', 0),
+            matrix.get('hard_skills', 0),
+            matrix.get('evidence', 0),
+            matrix.get('soft_skills', 0)
+        ]
+        fig = go.Figure(data=go.Scatterpolar(
+            r=values, theta=categories, fill='toself', line_color='#00ffcc'
+        ))
+        fig.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+            showlegend=False,
+            title="Semantic Alignment Radar",
+            template="plotly_dark"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with c3:
+        st.subheader("Strategic Pivot")
+        st.info(res.get('pivot', 'N/A'))
+
+    st.subheader("🔴 Critical Gaps")
+    missing = res.get('missing', [])
+    if missing:
+        st.write(", ".join(missing))
+    else:
+        st.success("No major gaps detected.")
 
 # --- FOOTER ---
 st.divider()
