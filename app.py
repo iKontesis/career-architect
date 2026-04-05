@@ -2,31 +2,32 @@ import streamlit as st
 import google.generativeai as genai
 import json
 
-# --- 1. CONFIGURATION & HIGH-CONTRAST STYLING ---
+# --- 1. CONFIGURATION & NEON EXECUTIVE STYLING ---
 st.set_page_config(page_title="Career Strategy Architect", page_icon="🛡️", layout="wide")
 
 st.markdown("""
     <style>
+    /* Global Background */
     .stApp { background-color: #0F172A !important; color: #F8FAFC !important; }
     
     /* SIDEBAR styling */
     section[data-testid="stSidebar"] { background-color: #1E293B !important; border-right: 1px solid #334155 !important; }
     section[data-testid="stSidebar"] * { color: white !important; }
 
-    /* LABELS - Neon Cyan for absolute visibility */
+    /* NEON LABELS (Visible in ANY mode) */
     label[data-testid="stWidgetLabel"] p {
-        color: #22D3EE !important; 
+        color: #00FBFF !important; /* Hyper Neon Cyan */
         font-weight: 900 !important;
         text-transform: uppercase !important;
-        font-size: 1.1rem !important;
-        letter-spacing: 0.1em !important;
+        font-size: 1.2rem !important;
+        text-shadow: 0 0 10px rgba(0, 251, 255, 0.5) !important;
     }
 
-    /* TEXT AREAS - High Contrast */
+    /* TEXT AREAS */
     .stTextArea textarea { 
         background-color: #1E293B !important; 
         color: #F8FAFC !important; 
-        border: 2px solid #22D3EE !important;
+        border: 2px solid #334155 !important;
         border-radius: 12px !important;
         font-size: 16px !important;
     }
@@ -35,20 +36,21 @@ st.markdown("""
     h1, h2, h3 { color: #F8FAFC !important; font-weight: 800 !important; }
 
     /* METRICS */
-    [data-testid="stMetricValue"] { color: #22D3EE !important; font-weight: 800 !important; }
+    [data-testid="stMetricValue"] { color: #00FBFF !important; font-weight: 800 !important; }
     [data-testid="stMetricLabel"] { color: #94A3B8 !important; }
 
     /* BUTTONS */
     .stButton button { 
-        background-color: #0891B2 !important; 
-        color: white !important; 
+        background-color: #00FBFF !important; 
+        color: #0F172A !important; 
+        border: none !important;
         border-radius: 10px !important;
-        font-weight: bold !important;
+        font-weight: 900 !important;
         padding: 1rem 2rem !important;
         width: 100% !important;
-        border: 2px solid #22D3EE !important;
+        transition: 0.3s;
     }
-    .stButton button:hover { background-color: #0E7490 !important; box-shadow: 0 0 20px #22D3EE; }
+    .stButton button:hover { background-color: #00E5E8 !important; box-shadow: 0 0 25px #00FBFF; }
 
     /* REPORT CARD */
     .report-card { 
@@ -65,11 +67,10 @@ st.markdown("""
 
 # --- 2. SIDEBAR ---
 with st.sidebar:
-    st.markdown("## ⚙️ SETTINGS")
+    st.markdown("## ⚙️ SYSTEM SETTINGS")
     api_key = st.text_input("Gemini API Key", type="password")
     st.divider()
-    st.markdown("### 🛡️ PROTOCOL")
-    st.caption("Stateless Architecture. Data is not persisted.")
+    st.info("PROTOCOL: Stateless Architecture. Version 1.0 Stable.")
 
 # --- 3. HEADER ---
 st.markdown("# 🛡️ CAREER STRATEGY **ARCHITECT**")
@@ -82,28 +83,31 @@ if 'audit_json' not in st.session_state:
 # --- 4. INPUTS ---
 col1, col2 = st.columns(2)
 with col1:
-    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350, placeholder="Paste your CV content here...")
+    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350)
 with col2:
-    job_desc = st.text_area("💼 JOB DESCRIPTION", height=350, placeholder="Paste the target JD here...")
+    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=350)
 
 # --- 5. STAGE A: AUDIT ---
 if st.button("RUN STRATEGIC AUDIT"):
     if not api_key:
         st.error("Missing API Key.")
     elif len(master_cv) < 50:
-        st.warning("Insufficient CV content.")
+        st.warning("Insufficient CV data.")
     else:
-        with st.spinner("Analyzing..."):
+        with st.spinner("FORCE ACCESSING STABLE API..."):
             try:
-                # FIX: Force REST to avoid gRPC 404 errors and use clean model names
-                genai.configure(api_key=api_key, transport='rest')
+                # THE SILVER BULLET: Force API Version 1 and REST transport
+                genai.configure(
+                    api_key=api_key, 
+                    transport='rest',
+                    client_options={'api_version': 'v1'}
+                )
                 
-                # Use the absolute model name
+                # Try the most robust model string
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 audit_prompt = f"""
-                Perform a strategic audit. Output ONLY valid JSON.
-                JSON Schema:
+                Analyze CV vs JD. Output ONLY valid JSON.
                 {{
                     "verdict": {{"level": "string", "score": number, "recommendation": "string"}},
                     "matrix": {{"hierarchy": number, "hard_skills": number, "evidence": number, "soft_skills": number}},
@@ -116,16 +120,15 @@ if st.button("RUN STRATEGIC AUDIT"):
                 
                 response = model.generate_content(audit_prompt)
                 
-                # Check for successful response
                 if response.text:
                     clean_text = response.text.replace('```json', '').replace('```', '').strip()
                     st.session_state.audit_json = json.loads(clean_text)
                     st.rerun()
                 else:
-                    st.error("AI returned an empty response. Verify API Key permissions.")
+                    st.error("AI node returned no data.")
                     
             except Exception as e:
-                st.error(f"Audit System Offline: {str(e)}")
+                st.error(f"Critical System Error: {str(e)}")
 
 # --- 6. DASHBOARD ---
 if st.session_state.audit_json:
@@ -140,8 +143,8 @@ if st.session_state.audit_json:
 
     st.markdown(f"""
     <div class="report-card">
-        <h3>Verdict: {res['verdict']['level']} ({res['verdict']['score']}/100)</h3>
-        <p style="color: #22D3EE;"><strong>Strategy:</strong> {res['pivot']}</p>
+        <h3 style="color: #00FBFF;">Verdict: {res['verdict']['level']} ({res['verdict']['score']}/100)</h3>
+        <p style="color: #00FBFF;"><strong>Strategy:</strong> {res['pivot']}</p>
         <p><i>{res['verdict']['recommendation']}</i></p>
         <p style="color: #94A3B8;"><strong>Gaps:</strong> {", ".join(res['missing'])}</p>
     </div>
@@ -151,8 +154,9 @@ if st.session_state.audit_json:
 
     # --- 7. STAGE B: SYNTHESIS ---
     if st.button("CONSTRUCT PORTFOLIO"):
-        with st.spinner("Writing..."):
+        with st.spinner("Synthesizing..."):
             try:
+                # Force stable version for Pro as well
                 model_pro = genai.GenerativeModel('gemini-1.5-pro')
                 arch_prompt = f"Create CV and Cover Letter based on: {json.dumps(res)}. CV Source: {master_cv}. No Oxford commas."
                 final_res = model_pro.generate_content(arch_prompt)
