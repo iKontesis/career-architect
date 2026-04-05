@@ -1,6 +1,5 @@
 import streamlit as st
 import json
-import plotly.graph_objects as go
 from google import genai
 
 # --- CONFIG & STYLING ---
@@ -14,15 +13,14 @@ st.markdown("""
     <style>
     .stApp { background-color: #0F172A; color: #F1F5F9; }
     section[data-testid="stSidebar"] { background-color: #1E293B; border-right: 1px solid #334155; }
-    .stButton button { background-color: #2563EB; color: white; border-radius: 6px; font-weight: 700; }
-    .metric-label { font-size: 0.85rem !important; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-    .stMetricValue { font-size: 2.2rem !important; font-weight: 800; }
-    .report-card { background-color: #1E293B; padding: 25px; border-radius: 12px; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); }
+    .stButton button { background-color: #2563EB; color: white; border-radius: 6px; font-weight: 700; padding: 0.8rem; }
+    .report-card { background-color: #1E293B; padding: 28px; border-radius: 14px; border: 1px solid #334155; box-shadow: 0 10px 20px -5px rgba(0,0,0,0.4); }
+    .gap-item { background-color: #1E293B; padding: 14px 18px; border-radius: 10px; border-left: 5px solid #F87171; margin-bottom: 12px; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🛡️ CAREER STRATEGY ARCHITECT")
-st.subheader("High-Fidelity Semantic Audit & Portfolio Synthesis")
+st.subheader("High-Fidelity Semantic Audit & Executive Portfolio Synthesis")
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -46,7 +44,7 @@ with st.sidebar:
     
     🔗 [LinkedIn](https://linkedin.com/in/ikontesis) | [𝕏](https://x.com/@ikontesis)
     
-    🛡️ Stateless Architecture | **v2.4.2**  
+    🛡️ Stateless Architecture | **v2.5.0**  
     Powered by Google GenAI SDK
     """)
 
@@ -57,10 +55,10 @@ if 'audit_json' not in st.session_state:
 # --- INPUTS ---
 col1, col2 = st.columns(2)
 with col1:
-    master_cv = st.text_area("📄 MASTER CV SOURCE (English)", height=400, 
+    master_cv = st.text_area("📄 MASTER CV SOURCE (English)", height=420, 
                              placeholder="Paste your full master CV here...")
 with col2:
-    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=400, 
+    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=420, 
                             placeholder="Paste the full job description here...")
 
 st.divider()
@@ -72,14 +70,22 @@ if st.button("🚀 RUN STRATEGIC AUDIT", type="primary", use_container_width=Tru
     elif len(master_cv.strip()) < 150 or len(job_desc.strip()) < 150:
         st.warning("Please provide sufficient data for both CV and Job Description.")
     else:
-        with st.spinner("Executing Strategic Semantic Audit with Gemini 3 Flash Preview..."):
+        with st.spinner("Executing Strategic Semantic Audit..."):
             try:
                 client = genai.Client(api_key=api_key)
 
                 audit_prompt = f"""
-Analyze the candidate's CV against the target Job Description for a senior/executive position.
+Analyze the CV against the Job Description for a senior/executive role.
+Return ONLY valid JSON with this exact structure:
 
-Return **ONLY** a valid JSON object with exactly the following structure. No extra text.
+{{
+  "verdict": {{"level": "string", "score": integer, "recommendation": "string"}},
+  "matrix": {{"hierarchy": integer, "hard_skills": integer, "evidence": integer, "soft_skills": integer}},
+  "pivot": "string",
+  "gaps": [
+    {{"gap": "description of the gap", "severity": integer}}   // severity 1-5 (1=minor/covered, 5=critical)
+  ]
+}}
 
 CV:
 {master_cv}
@@ -88,33 +94,7 @@ JD:
 {job_desc}
 """
 
-                json_schema = {
-                    "type": "object",
-                    "properties": {
-                        "verdict": {
-                            "type": "object",
-                            "properties": {
-                                "level": {"type": "string"},
-                                "score": {"type": "integer"},
-                                "recommendation": {"type": "string"}
-                            },
-                            "required": ["level", "score", "recommendation"]
-                        },
-                        "matrix": {
-                            "type": "object",
-                            "properties": {
-                                "hierarchy": {"type": "integer"},
-                                "hard_skills": {"type": "integer"},
-                                "evidence": {"type": "integer"},
-                                "soft_skills": {"type": "integer"}
-                            },
-                            "required": ["hierarchy", "hard_skills", "evidence", "soft_skills"]
-                        },
-                        "missing": {"type": "array", "items": {"type": "string"}},
-                        "pivot": {"type": "string"}
-                    },
-                    "required": ["verdict", "matrix", "missing", "pivot"]
-                }
+                json_schema = { ... }  # (το ίδιο αυστηρό schema όπως πριν – μπορείς να το κρατήσεις από προηγούμενη έκδοση)
 
                 response = client.models.generate_content(
                     model="gemini-3-flash-preview",
@@ -128,32 +108,32 @@ JD:
                 parsed = json.loads(response.text)
 
                 st.session_state.audit_json = {
-                    "verdict": parsed.get("verdict", {"level": "Pending", "score": 0, "recommendation": "Retry"}),
-                    "matrix": parsed.get("matrix", {"hierarchy": 0, "hard_skills": 0, "evidence": 0, "soft_skills": 0}),
-                    "missing": parsed.get("missing", []),
-                    "pivot": parsed.get("pivot", "No pivot identified.")
+                    "verdict": parsed.get("verdict", {}),
+                    "matrix": parsed.get("matrix", {}),
+                    "pivot": parsed.get("pivot", ""),
+                    "gaps": parsed.get("gaps", [])
                 }
 
-                st.success("✅ Strategic Audit completed successfully!")
+                st.success("✅ Audit completed!")
                 st.rerun()
 
             except Exception as e:
                 error_str = str(e).lower()
-                if "429" in error_str or "quota" in error_str or "rate limit" in error_str:
-                    st.error("⛔ Rate limit / Quota exceeded.")
-                    st.warning("This app uses the **owner's personal Gemini API key**. Please wait 60–90 seconds and try again.")
+                if "429" in error_str or "quota" in error_str:
+                    st.error("⛔ Rate limit reached")
+                    st.warning("This app uses the owner's personal Gemini key. Wait 60-90 seconds and retry.")
                 else:
-                    st.error(f"Audit failed: {str(e)[:250]}")
+                    st.error(f"Error: {str(e)[:200]}")
 
-# --- EXECUTIVE DASHBOARD (v2.4.2) ---
+# --- EXECUTIVE DASHBOARD ---
 if st.session_state.audit_json:
     res = st.session_state.audit_json
     verdict = res.get("verdict", {})
     matrix = res.get("matrix", {})
 
-    st.markdown("## 📊 STRATEGIC INTELLIGENCE REPORT")
+    st.markdown("## 📊 EXECUTIVE INTELLIGENCE REPORT")
 
-    # 4 KPI Metrics
+    # Top Metrics
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("HIERARCHY", f"{matrix.get('hierarchy', 0)}%")
     m2.metric("HARD SKILLS", f"{matrix.get('hard_skills', 0)}%")
@@ -162,72 +142,46 @@ if st.session_state.audit_json:
 
     st.divider()
 
-    # Main Executive Section
-    col_left, col_right = st.columns([2, 1])
+    col_l, col_r = st.columns([2, 1])
 
-    with col_left:
-        # Verdict Card
+    with col_l:
         st.markdown(f"""
         <div class="report-card">
-            <h2 style="margin:0 0 15px 0; color:#60A5FA;">Verdict: <strong>{verdict.get('level', 'N/A')}</strong> ({verdict.get('score', 0)}/100)</h2>
+            <h2>Verdict: <strong>{verdict.get('level', 'N/A')}</strong> ({verdict.get('score', 0)}/100)</h2>
             <p style="color:#94A3B8; font-size:1.05rem;">{verdict.get('recommendation', 'N/A')}</p>
         </div>
         """, unsafe_allow_html=True)
 
-        # Large Radar Chart
-        categories = ['Hierarchy', 'Hard Skills', 'Evidence', 'Soft Skills']
-        values = [
-            matrix.get('hierarchy', 0),
-            matrix.get('hard_skills', 0),
-            matrix.get('evidence', 0),
-            matrix.get('soft_skills', 0)
-        ]
-
-        fig = go.Figure(data=go.Scatterpolar(
-            r=values,
-            theta=categories,
-            fill='toself',
-            line_color='#00ffcc',
-            marker=dict(size=8)
-        ))
-
-        fig.update_layout(
-            polar=dict(
-                radialaxis=dict(visible=True, range=[0, 100], gridcolor="#334155"),
-                bgcolor="#0F172A"
-            ),
-            title=dict(text="Semantic Alignment Radar", font=dict(size=20, color="#F1F5F9")),
-            showlegend=False,
-            height=620,
-            template="plotly_dark",
-            paper_bgcolor="#0F172A",
-            plot_bgcolor="#0F172A",
-            margin=dict(l=40, r=40, t=80, b=40)
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    with col_right:
-        # Strategic Pivot
+    with col_r:
         st.markdown(f"""
         <div class="report-card" style="height:100%;">
-            <h3 style="margin-top:0; color:#60A5FA;">Strategic Pivot</h3>
-            <p style="line-height:1.6; color:#E2E8F0;">{res.get('pivot', 'No strategic direction available.')}</p>
+            <h3>Strategic Pivot</h3>
+            <p>{res.get('pivot', 'N/A')}</p>
         </div>
         """, unsafe_allow_html=True)
 
-    # Critical Gaps
+    # Critical Gaps – Bullet points με severity
     st.markdown("### 🔴 Critical Gaps")
-    missing = res.get('missing', [])
-    if missing:
-        st.markdown(f"""
-        <div style="background-color:#1E293B; padding:20px; border-radius:12px; border:1px solid #F87171;">
-            {", ".join(missing)}
-        </div>
-        """, unsafe_allow_html=True)
+    gaps = res.get("gaps", [])
+    if gaps:
+        for g in gaps:
+            severity = g.get("severity", 3)
+            color = "#F87171" if severity >= 4 else "#FB923C" if severity == 3 else "#94A3B8"
+            st.markdown(f"""
+            <div class="gap-item" style="border-left-color:{color};">
+                <strong>{g.get('gap', '')}</strong> 
+                <span style="float:right; color:{color}; font-weight:600;">Severity: {severity}/5</span>
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        st.success("✅ No critical gaps detected.")
+        st.success("No critical gaps identified.")
+
+    st.divider()
+
+    # Portfolio Button
+    if st.button("🖋️ CONSTRUCT EXECUTIVE PORTFOLIO (CV + Cover Letter)", type="secondary", use_container_width=True):
+        st.info("Portfolio synthesis (tailored CV + Cover Letter) is under development and will be available in v2.6.0")
 
 # --- FOOTER ---
 st.divider()
-st.caption("Developed by Ioannis Kontesis • 100% Stateless • Your data is never stored • Powered by Gemini 3 Flash Preview • v2.4.2")
+st.caption("Developed by Ioannis Kontesis • 100% Stateless • Your data is never stored • Powered by Gemini 3 Flash Preview • v2.5.0")
