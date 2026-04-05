@@ -1,116 +1,200 @@
 import streamlit as st
-import google.genai as genai
-from google.genai import types
 import json
 import plotly.graph_objects as go
-import pandas as pd
+from google import genai
+from google.genai import types
 
-# --- CONFIGURATION ---
-st.set_page_config(page_title="Career Strategy Architect v2.3.5", layout="wide")
-st.title("🚀 Career Strategy Architect v2.3.5")
-st.subheader("AI-Driven Professional Alignment & Semantic Audit")
+# --- CONFIGURATION & STYLING ---
+st.set_page_config(
+    page_title="Career Strategy Architect",
+    page_icon="🛡️",
+    layout="wide"
+)
 
-# --- SIDEBAR: API KEY ---
+st.markdown("""
+    <style>
+    .stApp { background-color: #0F172A; color: #F1F5F9; }
+    section[data-testid="stSidebar"] { background-color: #1E293B; border-right: 1px solid #334155; }
+    .stButton button { background-color: #2563EB; color: white; border-radius: 6px; font-weight: 700; }
+    .report-card { background-color: #1E293B; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("🛡️ CAREER STRATEGY ARCHITECT")
+st.subheader("High-Fidelity Semantic Audit & Portfolio Synthesis")
+
+# --- SIDEBAR ---
 with st.sidebar:
-    st.header("Settings")
-    api_key = st.text_input("Enter Gemini API Key", type="password")
-    st.info("Stateless mode: Your key is not stored.")
+    st.header("⚙️ ENGINE STATUS")
+    api_key = st.text_input("Gemini API Key", type="password", placeholder="Enter your key here")
+    
+    if api_key and len(api_key) > 30:
+        st.success("✅ API Key accepted")
+    else:
+        st.info("Enter your Gemini API Key to enable the engine")
+    
+    st.divider()
+    st.markdown("""
+    **Ioannis Kontesis**  
+    AI Transformation Architect  
+    Operational Resilience & Strategy Specialist  
+    Finance & Risk Professional
+    
+    🔗 [LinkedIn](https://linkedin.com/in/ikontesis) | [𝕏](https://x.com/@ikontesis)
+    
+    🛡️ Stateless Architecture | **v2.4.0**  
+    Powered by Google GenAI SDK
+    """)
 
-# --- SESSION STATE INITIALIZATION ---
+# --- SESSION STATE ---
 if 'audit_json' not in st.session_state:
     st.session_state.audit_json = None
 
-# --- INPUT SECTION ---
+# --- INPUTS ---
 col1, col2 = st.columns(2)
 with col1:
-    master_cv = st.text_area("PASTE MASTER CV (Source of Truth)", height=300)
+    master_cv = st.text_area("📄 MASTER CV SOURCE (English)", height=400, 
+                             placeholder="Paste your full master CV here...")
 with col2:
-    job_desc = st.text_area("PASTE JOB DESCRIPTION (Target)", height=300)
+    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=400, 
+                            placeholder="Paste the full job description here...")
 
-# --- 5. STAGE A: STRATEGIC AUDIT ---
-if st.button("RUN STRATEGIC AUDIT"):
-    if not api_key:
-        st.error("Please provide an API Key in the sidebar.")
-    elif len(master_cv) < 200 or len(job_desc) < 200:
-        st.warning("Please provide more detailed CV and Job Description data.")
+st.divider()
+
+# --- AUDIT BUTTON ---
+if st.button("🚀 RUN STRATEGIC AUDIT", type="primary", use_container_width=True):
+    if not api_key or len(api_key) < 30:
+        st.error("Please enter a valid Gemini API Key in the sidebar.")
+    elif len(master_cv.strip()) < 150 or len(job_desc.strip()) < 150:
+        st.warning("Please provide sufficient data for both CV and Job Description.")
     else:
-        client = genai.Client(api_key=api_key)
-        
-        with st.spinner("Executing Strategic Semantic Audit (Gemini 3.1 Flash)..."):
+        with st.spinner("Executing Strategic Semantic Audit with Gemini 3.1..."):
             try:
-                # Προετοιμασία του Audit Prompt
-                audit_prompt = f"""Analyze the CV against the JD for a senior executive role.
-                Focus on hierarchy alignment, hard skills match, evidence of impact, and soft skills.
-                
-                CV: {master_cv}
-                JD: {job_desc}"""
+                client = genai.Client(api_key=api_key)
 
-                # Κλήση με το νέο SDK και JSON Schema
-                response = client.models.generate_content(
-                    model="gemini-3.1-flash",
-                    config=types.GenerateContentConfig(
-                        system_instruction="You are a strict JSON engine. Output ONLY a valid JSON object with keys: verdict (level, score, recommendation), matrix (hierarchy, hard_skills, evidence, soft_skills), missing (list), pivot (string).",
-                        response_mime_type="application/json"
-                    ),
-                    contents=audit_prompt
-                )
-                
-                # Ασφαλές Parsing
-                parsed_data = json.loads(response.text)
-                
-                # Defensive Check για τα κλειδιά (Fixes KeyError)
-                st.session_state.audit_json = {
-                    "verdict": parsed_data.get("verdict", {"level": "Audit Pending", "score": 0, "recommendation": "N/A"}),
-                    "matrix": parsed_data.get("matrix", {"hierarchy": 0, "hard_skills": 0, "evidence": 0, "soft_skills": 0}),
-                    "missing": parsed_data.get("missing", ["No data returned"]),
-                    "pivot": parsed_data.get("pivot", "Retry audit for strategic direction.")
+                audit_prompt = f"""
+Analyze the candidate's CV against the target Job Description for a senior/executive position.
+
+Return **ONLY** a valid JSON object with exactly the following structure. No extra text, no markdown.
+
+CV:
+{master_cv}
+
+JD:
+{job_desc}
+"""
+
+                json_schema = {
+                    "type": "object",
+                    "properties": {
+                        "verdict": {
+                            "type": "object",
+                            "properties": {
+                                "level": {"type": "string"},
+                                "score": {"type": "integer"},
+                                "recommendation": {"type": "string"}
+                            },
+                            "required": ["level", "score", "recommendation"]
+                        },
+                        "matrix": {
+                            "type": "object",
+                            "properties": {
+                                "hierarchy": {"type": "integer"},
+                                "hard_skills": {"type": "integer"},
+                                "evidence": {"type": "integer"},
+                                "soft_skills": {"type": "integer"}
+                            },
+                            "required": ["hierarchy", "hard_skills", "evidence", "soft_skills"]
+                        },
+                        "missing": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "pivot": {"type": "string"}
+                    },
+                    "required": ["verdict", "matrix", "missing", "pivot"]
                 }
-                
-                st.success("Audit Completed Successfully!")
+
+                response = client.models.generate_content(
+                    model="gemini-3.1-flash",   # ← πιο σταθερό & διαθέσιμο μοντέλο
+                    contents=audit_prompt,
+                    config={
+                        "response_mime_type": "application/json",
+                        "response_json_schema": json_schema
+                    }
+                )
+
+                parsed = json.loads(response.text)
+
+                # Defensive population
+                st.session_state.audit_json = {
+                    "verdict": parsed.get("verdict", {"level": "Pending", "score": 0, "recommendation": "Retry audit"}),
+                    "matrix": parsed.get("matrix", {"hierarchy": 0, "hard_skills": 0, "evidence": 0, "soft_skills": 0}),
+                    "missing": parsed.get("missing", []),
+                    "pivot": parsed.get("pivot", "No pivot identified.")
+                }
+
+                st.success("✅ Strategic Audit completed successfully!")
                 st.rerun()
 
             except Exception as e:
-                st.error(f"Audit Engine Error: {str(e)}")
+                st.error(f"Audit failed: {str(e)[:300]}")
+                st.info("Tip: Try again in 30-60 seconds if you hit rate limits.")
 
-# --- 6. DASHBOARD & ANALYSIS ---
+# --- RESULTS DASHBOARD ---
 if st.session_state.audit_json:
     res = st.session_state.audit_json
-    verdict = res.get('verdict', {})
-    matrix = res.get('matrix', {})
-    
-    st.divider()
+    verdict = res.get("verdict", {})
+    matrix = res.get("matrix", {})
+
+    st.markdown("## 📊 STRATEGIC INTELLIGENCE REPORT")
+
     c1, c2, c3 = st.columns([1, 2, 1])
-    
+
     with c1:
-        st.metric("Match Score", f"{verdict.get('score', 0)}/100")
-        st.write(f"**Level:** {verdict.get('level', 'N/A')}")
-        st.write(f"**Action:** {verdict.get('recommendation', 'N/A')}")
+        st.metric("Overall Match", f"{verdict.get('score', 0)}/100", 
+                  delta=verdict.get('level', 'N/A'))
+        st.write(f"**Recommendation:** {verdict.get('recommendation', 'N/A')}")
 
     with c2:
-        # RADAR CHART
         categories = ['Hierarchy', 'Hard Skills', 'Evidence', 'Soft Skills']
         values = [
-            matrix.get('hierarchy', 0), 
-            matrix.get('hard_skills', 0), 
-            matrix.get('evidence', 0), 
+            matrix.get('hierarchy', 0),
+            matrix.get('hard_skills', 0),
+            matrix.get('evidence', 0),
             matrix.get('soft_skills', 0)
         ]
-        
+
         fig = go.Figure(data=go.Scatterpolar(
-            r=values, theta=categories, fill='toself', name='Alignment',
+            r=values,
+            theta=categories,
+            fill='toself',
             line_color='#00ffcc'
         ))
-        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False, 
-                          title="Semantic Alignment Matrix", template="plotly_dark")
+        fig.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 100])),
+            showlegend=False,
+            title="Semantic Alignment Radar",
+            template="plotly_dark"
+        )
         st.plotly_chart(fig, use_container_width=True)
 
     with c3:
         st.subheader("Strategic Pivot")
-        st.info(res.get('pivot', 'No pivot instructions available.'))
-        
-    st.subheader("🔴 Missing Critical Elements")
-    st.write(", ".join(res.get('missing', [])))
+        st.info(res.get('pivot', 'N/A'))
+
+    st.subheader("🔴 Critical Gaps")
+    if res.get('missing'):
+        st.write(", ".join(res.get('missing', [])))
+    else:
+        st.success("No major gaps detected.")
+
+    st.divider()
+
+    # Placeholder για Stage B (Portfolio Synthesis) – μπορείς να το επεκτείνεις αργότερα
+    if st.button("🖋️ CONSTRUCT EXECUTIVE PORTFOLIO"):
+        st.info("Portfolio synthesis coming in v2.5 – currently under development.")
 
 # --- FOOTER ---
 st.divider()
-st.caption("Developed by Ioannis Kontesis | Powered by Gemini 3.1 & Stateless Python Architecture")
+st.caption("Developed by Ioannis Kontesis • Stateless • No data stored • Powered by Google GenAI SDK (Gemini 3.1)")
