@@ -14,13 +14,13 @@ st.markdown("""
     section[data-testid="stSidebar"] { background-color: #1E293B !important; border-right: 1px solid #334155 !important; }
     section[data-testid="stSidebar"] * { color: white !important; }
 
-    /* NEON LABELS - FORCE VISIBILITY (The Fix for Dark Mode) */
+    /* NEON LABELS - FORCE VISIBILITY (Fixed for Dark Mode) */
     label[data-testid="stWidgetLabel"] p {
         color: #00FBFF !important; /* Neon Cyan */
         font-weight: 900 !important;
         text-transform: uppercase !important;
         font-size: 1.1rem !important;
-        text-shadow: 0 0 8px rgba(0, 251, 255, 0.6) !important;
+        text-shadow: 0 0 10px rgba(0, 251, 255, 0.7) !important;
     }
 
     /* TEXT AREAS - High Contrast */
@@ -53,7 +53,7 @@ st.markdown("""
         width: 100% !important;
         text-transform: uppercase;
     }
-    .stButton button:hover { background-color: #00E5E8 !important; box-shadow: 0 0 20px #00FBFF; }
+    .stButton button:hover { background-color: #00E5E8 !important; box-shadow: 0 0 25px #00FBFF; }
 
     /* REPORT CARD */
     .report-card { 
@@ -73,8 +73,7 @@ with st.sidebar:
     st.markdown("## ⚙️ SYSTEM SETTINGS")
     api_key = st.text_input("Gemini API Key", type="password")
     st.divider()
-    st.markdown("### 🛡️ PROTOCOL")
-    st.caption("Executive Edition 1.1 | Stateless & Secure")
+    st.info("Executive Edition 1.2 | Ultra-High Visibility")
 
 # --- 3. HEADER ---
 st.markdown("# 🛡️ CAREER STRATEGY **ARCHITECT**")
@@ -94,20 +93,19 @@ with col2:
 # --- 5. STAGE A: AUDIT ---
 if st.button("RUN STRATEGIC AUDIT"):
     if not api_key:
-        st.error("Missing API Key. Please provide it in the sidebar.")
-    elif len(master_cv) < 50 or len(job_desc) < 50:
-        st.warning("Insufficient data. Please provide more content for analysis.")
+        st.error("Missing API Key.")
+    elif len(master_cv) < 50:
+        st.warning("Insufficient data.")
     else:
-        with st.spinner("CONNECTING TO STRATEGIC ENGINE..."):
+        with st.spinner("CONNECTING TO STABLE ENGINE..."):
             try:
-                # SIMPLE CONFIGURATION (Transport set to 'rest' for stability)
                 genai.configure(api_key=api_key, transport='rest')
                 
-                # Try creating the model - Using the most stable identifier
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # THE FIX: Using the '-latest' suffix to force the stable endpoint
+                model = genai.GenerativeModel('gemini-1.5-flash-latest')
                 
                 audit_prompt = f"""
-                Analyze the CV vs JD. Output ONLY a valid JSON object.
+                Analyze CV vs JD. Output ONLY a valid JSON object.
                 Schema:
                 {{
                     "verdict": {{"level": "string", "score": number, "recommendation": "string"}},
@@ -126,16 +124,24 @@ if st.button("RUN STRATEGIC AUDIT"):
                     st.session_state.audit_json = json.loads(clean_text)
                     st.rerun()
                 else:
-                    st.error("Empty response from AI. Possible API restriction.")
+                    st.error("Empty AI Response.")
                     
             except Exception as e:
-                # EXPLANATORY ERROR HANDLING
-                err_msg = str(e)
-                if "404" in err_msg:
-                    st.error("STRATEGIC LINK FAILURE (404): The AI Model identifier has moved. Attempting recovery...")
-                    st.info("Try using 'gemini-1.5-flash-latest' if this persists.")
+                # DYNAMIC RECOVERY LOGIC
+                error_str = str(e)
+                if "404" in error_str:
+                    st.error("STRATEGIC LINK FAILURE (404): The API endpoint is currently migrating. Attempting fallback...")
+                    # Fallback attempt with alternative string
+                    try:
+                        fallback_model = genai.GenerativeModel('gemini-1.5-flash')
+                        response = fallback_model.generate_content(audit_prompt)
+                        clean_text = response.text.replace('```json', '').replace('```', '').strip()
+                        st.session_state.audit_json = json.loads(clean_text)
+                        st.rerun()
+                    except:
+                        st.error("Deep Link Error. Please check if Gemini 1.5 Flash is enabled in your AI Studio account.")
                 else:
-                    st.error(f"Audit System Offline: {err_msg}")
+                    st.error(f"Audit System Offline: {error_str}")
 
 # --- 6. DASHBOARD ---
 if st.session_state.audit_json:
@@ -151,9 +157,9 @@ if st.session_state.audit_json:
     st.markdown(f"""
     <div class="report-card">
         <h3 style="color: #00FBFF; margin-top:0;">Verdict: {res['verdict']['level']} ({res['verdict']['score']}/100)</h3>
-        <p style="color: #00FBFF;"><strong>Proposed Strategy:</strong> {res['pivot']}</p>
+        <p style="color: #00FBFF;"><strong>Strategy:</strong> {res['pivot']}</p>
         <p><i>{res['verdict']['recommendation']}</i></p>
-        <p style="color: #94A3B8;"><strong>Critical Gaps:</strong> {", ".join(res['missing'])}</p>
+        <p style="color: #94A3B8;"><strong>Gaps:</strong> {", ".join(res['missing'])}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -161,10 +167,10 @@ if st.session_state.audit_json:
 
     # --- 7. STAGE B: SYNTHESIS ---
     if st.button("CONSTRUCT EXECUTIVE PORTFOLIO"):
-        with st.spinner("Synthesizing Executive Narrative..."):
+        with st.spinner("Writing..."):
             try:
-                model_pro = genai.GenerativeModel('gemini-1.5-pro')
-                arch_prompt = f"Create CV and Cover Letter based on: {json.dumps(res)}. CV Source: {master_cv}. No Oxford commas."
+                model_pro = genai.GenerativeModel('gemini-1.5-pro-latest')
+                arch_prompt = f"Create CV and Cover Letter based on: {json.dumps(res)}. Source: {master_cv}. No Oxford commas."
                 final_res = model_pro.generate_content(arch_prompt)
                 st.markdown("## 🖋️ TAILOR-MADE PORTFOLIO")
                 st.markdown(final_res.text)
