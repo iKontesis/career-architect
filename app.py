@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import json
 
-# --- 1. CONFIGURATION & QUIET LUXURY STYLING ---
+# --- 1. CONFIGURATION & BOARDROOM STYLING ---
 st.set_page_config(page_title="Career Strategy Architect", page_icon="🛡️", layout="wide")
 
 st.markdown("""
@@ -16,7 +16,7 @@ st.markdown("""
 
     /* EXECUTIVE LABELS - Steel Blue (Visible & Elegant) */
     label[data-testid="stWidgetLabel"] p {
-        color: #94A3B8 !important; /* Soft Slate Blue */
+        color: #94A3B8 !important; 
         font-weight: 700 !important;
         text-transform: uppercase !important;
         font-size: 0.9rem !important;
@@ -68,17 +68,24 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. SIDEBAR ---
+# --- 2. SIDEBAR & API LOGIC ---
 with st.sidebar:
     st.markdown("## ⚙️ SYSTEM SETTINGS")
-    api_key = st.text_input("Gemini API Key", type="password")
+    
+    # Logic: Check for secret key first, otherwise ask user
+    if "GEMINI_API_KEY" in st.secrets:
+        api_key = st.secrets["GEMINI_API_KEY"]
+        st.success("Strategic Engine: ACTIVE")
+    else:
+        api_key = st.text_input("Enter API Key (Manual Mode)", type="password")
+        st.info("Enter your Google AI Studio Key to proceed.")
+    
     st.divider()
     st.markdown("### 🛡️ STATUS")
-    if api_key:
-        st.success("API Key Active")
-    st.caption("Executive Portfolio Architect v2.1")
+    st.caption("Executive Portfolio Architect v2.2")
+    st.caption("Stateless Architecture | No Data Retained")
 
-# --- 3. HEADER ---
+# --- 3. APP HEADER ---
 st.markdown("# 🛡️ CAREER STRATEGY **ARCHITECT**")
 st.markdown("#### *High-Level Executive Decision Support System*")
 st.divider()
@@ -86,19 +93,21 @@ st.divider()
 if 'audit_json' not in st.session_state:
     st.session_state.audit_json = None
 
-# --- 4. INPUTS ---
+# --- 4. INPUT AREA ---
 col1, col2 = st.columns(2)
 with col1:
-    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350)
+    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350, placeholder="Paste professional history...")
 with col2:
-    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=350)
+    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=350, placeholder="Paste target requirements...")
 
-# --- 5. STAGE A: AUDIT ---
+# --- 5. STAGE A: THE GATEKEEPER (AUDIT) ---
 if st.button("RUN STRATEGIC AUDIT"):
     if not api_key:
-        st.error("Missing API Key.")
+        st.error("ACCESS DENIED: Please provide a valid API Key.")
+    elif len(master_cv) < 50:
+        st.warning("INSUFFICIENT DATA: Provide more CV context.")
     else:
-        with st.spinner("Executing Strategic Audit..."):
+        with st.spinner("EXECUTING SEMANTIC AUDIT..."):
             try:
                 genai.configure(api_key=api_key, transport='rest')
                 model = genai.GenerativeModel('gemini-3-flash-preview')
@@ -112,20 +121,22 @@ if st.button("RUN STRATEGIC AUDIT"):
                     "missing": ["string"],
                     "pivot": "string"
                 }}
+                Rules: No Oxford commas. 
                 CV: {master_cv}
                 JD: {job_desc}
                 """
+                
                 response = model.generate_content(audit_prompt)
                 clean_text = response.text.replace('```json', '').replace('```', '').strip()
                 st.session_state.audit_json = json.loads(clean_text)
                 st.rerun()
             except Exception as e:
-                st.error(f"Audit Error: {str(e)}")
+                st.error(f"Audit Engine Failure: {str(e)}")
 
-# --- 6. DASHBOARD ---
+# --- 6. DISPLAY DASHBOARD ---
 if st.session_state.audit_json:
     res = st.session_state.audit_json
-    st.markdown("## 📊 AUDIT RESULTS")
+    st.markdown("## 📊 STRATEGIC INTELLIGENCE REPORT")
     
     m1, m2, m3, m4 = st.columns(4)
     m1.metric("HIERARCHY", f"{res['matrix']['hierarchy']}%")
@@ -138,27 +149,30 @@ if st.session_state.audit_json:
         <h3 style="margin-top:0;">Verdict: {res['verdict']['level']} ({res['verdict']['score']}/100)</h3>
         <p style="color: #60A5FA; font-size: 1.1rem;"><strong>Proposed Strategy:</strong> {res['pivot']}</p>
         <p style="font-style: italic;">{res['verdict']['recommendation']}</p>
-        <p style="color: #94A3B8;"><strong>Critical Gaps:</strong> {", ".join(res['missing'])}</p>
+        <p style="color: #94A3B8;"><strong>Critical Semantic Gaps:</strong> {", ".join(res['missing'])}</p>
     </div>
     """, unsafe_allow_html=True)
 
     st.divider()
 
-    # --- 7. STAGE B: SYNTHESIS ---
+    # --- 7. STAGE B: THE ARCHITECT (SYNTHESIS) ---
     if st.button("CONSTRUCT EXECUTIVE PORTFOLIO"):
-        with st.spinner("Synthesizing Narrative..."):
+        with st.spinner("SYNTHESIZING EXECUTIVE NARRATIVE..."):
             try:
-                # Primary attempt with 3-pro
+                # Primary attempt with Gemini 3 Pro
                 model_pro = genai.GenerativeModel('gemini-3-pro-preview')
-                arch_prompt = f"Create high-impact CV and Cover Letter based on: {json.dumps(res)}. CV Source: {master_cv}. No Oxford commas."
+                arch_prompt = f"Create high-impact CV and Cover Letter based on: {json.dumps(res)}. CV Source: {master_cv}. No Oxford commas. High-stakes executive tone."
                 final_res = model_pro.generate_content(arch_prompt)
-                st.markdown("## 🖋️ TAILOR-MADE PORTFOLIO")
+                st.markdown("## 🖋️ TAILOR-MADE EXECUTIVE PORTFOLIO")
                 st.markdown(final_res.text)
-                st.download_button("Download TXT", final_res.text, file_name="portfolio.txt")
+                st.download_button("Download Portfolio (TXT)", final_res.text, file_name="executive_portfolio.txt")
             except Exception as e:
-                # Silent Fallback to Flash
-                fallback = genai.GenerativeModel('gemini-3-flash-preview')
-                final_res = fallback.generate_content(arch_prompt)
-                st.markdown("## 🖋️ TAILOR-MADE PORTFOLIO (High-Speed Engine)")
-                st.markdown(final_res.text)
-                st.download_button("Download TXT", final_res.text, file_name="portfolio.txt")
+                # Silent Fallback to Flash if Pro Quota is exceeded (429)
+                try:
+                    fallback = genai.GenerativeModel('gemini-3-flash-preview')
+                    final_res = fallback.generate_content(arch_prompt)
+                    st.markdown("## 🖋️ TAILOR-MADE EXECUTIVE PORTFOLIO (High-Speed Engine)")
+                    st.markdown(final_res.text)
+                    st.download_button("Download Portfolio (TXT)", final_res.text, file_name="executive_portfolio.txt")
+                except Exception as e2:
+                    st.error(f"Synthesis Critical Failure: {str(e2)}")
