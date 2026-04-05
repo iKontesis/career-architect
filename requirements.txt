@@ -1,2 +1,4 @@
 streamlit
-google-generativeai
+google-genai>=1.70.0
+plotly
+pandas
