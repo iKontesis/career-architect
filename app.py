@@ -45,9 +45,9 @@ if 'audit_json' not in st.session_state:
 # --- 4. INPUT AREA ---
 col1, col2 = st.columns(2)
 with col1:
-    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350, placeholder="Paste your full professional history...")
+    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350, placeholder="Paste professional history...")
 with col2:
-    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=350, placeholder="Paste the target role requirements...")
+    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=350, placeholder="Paste target requirements...")
 
 # --- 5. STAGE A: THE GATEKEEPER (AUDIT) ---
 if st.button("RUN STRATEGIC AUDIT"):
@@ -58,35 +58,40 @@ if st.button("RUN STRATEGIC AUDIT"):
     else:
         with st.spinner("EXECUTING SEMANTIC AUDIT..."):
             try:
-                # FIX: Explicit configuration right before model instantiation
+                # FIX 1: Explicit Configuration
                 genai.configure(api_key=api_key)
                 
-                # Using strings that are most likely to be supported across all SDK versions
-                model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+                # FIX 2: Use the shortest possible model string
+                # Some environments fail with 'models/...' prefix
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 audit_prompt = f"""
-                You are THE CAREER STRATEGY ARCHITECT.
-                Perform a high-level audit between the CV and JD.
-                Output ONLY a valid JSON object matching this schema:
+                Analyze the CV and JD provided. Output ONLY a valid JSON object.
+                Schema:
                 {{
                     "verdict": {{"level": "string", "score": number, "recommendation": "string"}},
                     "matrix": {{"hierarchy": number, "hard_skills": number, "evidence": number, "soft_skills": number}},
                     "missing": ["string"],
                     "pivot": "string"
                 }}
-                Rules: No conversational text. No Oxford commas.
+                Rules: No Oxford commas.
                 CV: {master_cv}
                 JD: {job_desc}
                 """
                 
+                # FIX 3: Add a small safety check for the response
                 response = model.generate_content(audit_prompt)
                 
-                # Handling potential Markdown blocks in response
-                clean_json = response.text.replace('```json', '').replace('```', '').strip()
-                st.session_state.audit_json = json.loads(clean_json)
-                st.rerun()
+                if not response.text:
+                    st.error("Empty response from AI. Check your API quota.")
+                else:
+                    clean_json = response.text.replace('```json', '').replace('```', '').strip()
+                    st.session_state.audit_json = json.loads(clean_json)
+                    st.rerun()
             except Exception as e:
-                st.error(f"AUDIT SYSTEM OFFLINE: {str(e)}")
+                # FIX 4: Improved Error Reporting
+                st.error(f"AUDIT ERROR: {str(e)}")
+                st.info("Tip: Ensure your API Key is from Google AI Studio and has 'Gemini 1.5 Flash' enabled.")
 
 # --- 6. RESULTS DASHBOARD ---
 if st.session_state.audit_json:
@@ -115,12 +120,10 @@ if st.session_state.audit_json:
         with st.spinner("SYNTHESIZING NARRATIVE..."):
             try:
                 genai.configure(api_key=api_key)
-                # Using specific version name for the Pro model
-                model_pro = genai.GenerativeModel(model_name='gemini-1.5-pro')
+                model_pro = genai.GenerativeModel('gemini-1.5-pro')
                 
                 arch_prompt = f"""
-                You are THE CAREER ARCHITECT. 
-                Generate a high-impact, ATS-optimized CV and Cover Letter.
+                Generate high-impact CV and Cover Letter.
                 Strategy: {res['pivot']}
                 Audit JSON: {json.dumps(res)}
                 CV Source: {master_cv}
@@ -138,4 +141,4 @@ if st.session_state.audit_json:
                     mime="text/plain"
                 )
             except Exception as e:
-                st.error(f"SYNTHESIS SYSTEM OFFLINE: {str(e)}")
+                st.error(f"SYNTHESIS ERROR: {str(e)}")
