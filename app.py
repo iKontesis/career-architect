@@ -5,19 +5,23 @@ import json
 # --- CONFIGURATION & STYLING ---
 st.set_page_config(page_title="Executive Portfolio Architect", page_icon="🛡️", layout="wide")
 
-# FIX: Explicitly setting text color and background to avoid "invisible text"
+# CSS: Ensuring text visibility and Executive Aesthetic
 st.markdown("""
     <style>
     .main { background-color: #F8FAFC; }
     
-    /* Force text area visibility */
+    /* Text area font color fix (Slate Blue/Black) */
     .stTextArea textarea { 
         background-color: #FFFFFF !important; 
-        color: #1E293B !important; 
+        color: #0F172A !important; 
         border-radius: 10px; 
-        border: 1px solid #E2E8F0; 
+        border: 1px solid #E2E8F0;
+        font-size: 14px;
     }
     
+    /* Force label color to be dark for visibility */
+    .stTextArea label { color: #1E293B !important; font-weight: 600; }
+
     /* Sidebar styling */
     section[data-testid="stSidebar"] { background-color: #1A365D; color: white; }
     section[data-testid="stSidebar"] h1 { color: white; }
@@ -56,34 +60,32 @@ if 'audit_json' not in st.session_state:
 # --- INPUT AREA ---
 col1, col2 = st.columns(2)
 with col1:
-    master_cv = st.text_area("📄 Paste Master CV", height=300, placeholder="Your full experience source...")
+    master_cv = st.text_area("📄 Master CV Source", height=300, placeholder="Paste your full CV content here...")
 with col2:
-    job_desc = st.text_area("💼 Paste Job Description", height=300, placeholder="Target role requirements...")
+    job_desc = st.text_area("💼 Job Description", height=300, placeholder="Paste target requirements here...")
 
 # --- STAGE A: THE GATEKEEPER (AUDIT) ---
 if st.button("RUN STRATEGIC AUDIT"):
     if not api_key:
         st.error("Please enter an API Key in the sidebar.")
     elif len(master_cv) < 50 or len(job_desc) < 50:
-        st.warning("Please provide more detailed text for both CV and JD.")
+        st.warning("Input too short. Please provide more context.")
     else:
-        with st.spinner("Analyzing alignment..."):
+        with st.spinner("Executing Strategic Audit..."):
             try:
                 genai.configure(api_key=api_key)
-                # FIX: Using full model path to avoid NotFound error
-                model = genai.GenerativeModel('models/gemini-1.5-flash')
+                # FIX: Removing 'models/' prefix which causes 404 in some SDK versions
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 audit_prompt = f"""
-                ### ROLE: THE CAREER STRATEGY ARCHITECT
-                Analyze the compatibility between the CV and JD provided.
-                Output ONLY a valid JSON object matching this schema:
+                Analyze CV vs JD. Output ONLY valid JSON:
                 {{
                     "verdict": {{"level": "string", "score": number, "recommendation": "string"}},
                     "matrix": {{"hierarchy": number, "hard_skills": number, "evidence": number, "soft_skills": number}},
                     "missing": ["string"],
                     "pivot": "string"
                 }}
-                Rules: No Oxford commas. Industry-agnostic. 
+                Rules: No Oxford commas.
                 CV: {master_cv}
                 JD: {job_desc}
                 """
@@ -91,14 +93,14 @@ if st.button("RUN STRATEGIC AUDIT"):
                 response = model.generate_content(audit_prompt)
                 clean_json = response.text.replace('```json', '').replace('```', '').strip()
                 st.session_state.audit_json = json.loads(clean_json)
-                st.rerun() # Refresh to show results
+                st.rerun()
             except Exception as e:
-                st.error(f"Audit Error: {str(e)}")
+                st.error(f"Audit System Offline: {str(e)}")
 
 # --- DISPLAY AUDIT RESULTS ---
 if st.session_state.audit_json:
     res = st.session_state.audit_json
-    st.markdown("## 📊 ATS Intelligence Report")
+    st.markdown("## 📊 Strategic Intelligence Report")
     
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Hierarchy", f"{res['matrix']['hierarchy']}%")
@@ -108,10 +110,10 @@ if st.session_state.audit_json:
 
     st.markdown(f"""
     <div class="report-card">
-        <h3>Verdict: {res['verdict']['level']} (Score: {res['verdict']['score']}/100)</h3>
-        <p><strong>Proposed Strategy:</strong> {res['pivot']}</p>
+        <h3>Verdict: {res['verdict']['level']} ({res['verdict']['score']}/100)</h3>
+        <p><strong>Strategic Pivot:</strong> {res['pivot']}</p>
         <p><i>{res['verdict']['recommendation']}</i></p>
-        <p style="color: #64748B;"><strong>Critical Semantic Gaps:</strong> {", ".join(res['missing'])}</p>
+        <p style="color: #64748B;"><strong>Gaps:</strong> {", ".join(res['missing'])}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -119,24 +121,23 @@ if st.session_state.audit_json:
 
     # --- STAGE B: THE ARCHITECT (GENERATION) ---
     if st.button("CONSTRUCT EXECUTIVE PORTFOLIO"):
-        with st.spinner("Architecting documents..."):
+        with st.spinner("Synthesizing Narrative..."):
             try:
                 genai.configure(api_key=api_key)
-                # FIX: Using full model path
-                model_pro = genai.GenerativeModel('models/gemini-1.5-pro')
+                # FIX: Removing 'models/' prefix
+                model_pro = genai.GenerativeModel('gemini-1.5-pro')
                 
                 arch_prompt = f"""
-                ### ROLE: THE CAREER ARCHITECT
-                Generate a high-impact, ATS-optimized CV and Cover Letter.
+                Generate high-impact CV and Cover Letter.
                 Strategy: {res['pivot']}
                 Master CV: {master_cv}
                 Audit Data: {json.dumps(res)}
-                Constraints: Use ONLY years (2022-2025). NO Oxford commas. High-level executive tone.
+                Constraints: Years only (2022-2025). No Oxford commas. Executive tone.
                 """
                 
                 final_response = model_pro.generate_content(arch_prompt)
-                st.markdown("## 🖋️ Tailor-Made Portfolio")
+                st.markdown("## 🖋️ Strategic Portfolio")
                 st.markdown(final_response.text)
-                st.download_button("Download as Text", final_response.text, file_name="executive_portfolio.txt")
+                st.download_button("Export as TXT", final_response.text, file_name="executive_portfolio.txt")
             except Exception as e:
-                st.error(f"Synthesis Error: {str(e)}")
+                st.error(f"Synthesis System Offline: {str(e)}")
