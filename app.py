@@ -7,29 +7,32 @@ st.set_page_config(page_title="Career Strategy Architect", page_icon="🛡️", 
 
 st.markdown("""
     <style>
-    /* Global Background */
+    /* Global App Background */
     .stApp { background-color: #0F172A !important; color: #F8FAFC !important; }
     
     /* SIDEBAR styling */
     section[data-testid="stSidebar"] { background-color: #1E293B !important; border-right: 1px solid #334155 !important; }
     section[data-testid="stSidebar"] * { color: white !important; }
 
-    /* NEON LABELS (Visible in ANY mode) */
+    /* NEON LABELS - FORCE VISIBILITY (The Fix for Dark Mode) */
     label[data-testid="stWidgetLabel"] p {
-        color: #00FBFF !important; /* Hyper Neon Cyan */
+        color: #00FBFF !important; /* Neon Cyan */
         font-weight: 900 !important;
         text-transform: uppercase !important;
-        font-size: 1.2rem !important;
-        text-shadow: 0 0 10px rgba(0, 251, 255, 0.5) !important;
+        font-size: 1.1rem !important;
+        text-shadow: 0 0 8px rgba(0, 251, 255, 0.6) !important;
     }
 
-    /* TEXT AREAS */
+    /* TEXT AREAS - High Contrast */
     .stTextArea textarea { 
         background-color: #1E293B !important; 
         color: #F8FAFC !important; 
         border: 2px solid #334155 !important;
         border-radius: 12px !important;
         font-size: 16px !important;
+    }
+    .stTextArea textarea:focus {
+        border: 2px solid #00FBFF !important;
     }
     
     /* HEADERS */
@@ -48,9 +51,9 @@ st.markdown("""
         font-weight: 900 !important;
         padding: 1rem 2rem !important;
         width: 100% !important;
-        transition: 0.3s;
+        text-transform: uppercase;
     }
-    .stButton button:hover { background-color: #00E5E8 !important; box-shadow: 0 0 25px #00FBFF; }
+    .stButton button:hover { background-color: #00E5E8 !important; box-shadow: 0 0 20px #00FBFF; }
 
     /* REPORT CARD */
     .report-card { 
@@ -70,7 +73,8 @@ with st.sidebar:
     st.markdown("## ⚙️ SYSTEM SETTINGS")
     api_key = st.text_input("Gemini API Key", type="password")
     st.divider()
-    st.info("PROTOCOL: Stateless Architecture. Version 1.0 Stable.")
+    st.markdown("### 🛡️ PROTOCOL")
+    st.caption("Executive Edition 1.1 | Stateless & Secure")
 
 # --- 3. HEADER ---
 st.markdown("# 🛡️ CAREER STRATEGY **ARCHITECT**")
@@ -83,31 +87,28 @@ if 'audit_json' not in st.session_state:
 # --- 4. INPUTS ---
 col1, col2 = st.columns(2)
 with col1:
-    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350)
+    master_cv = st.text_area("📄 MASTER CV SOURCE", height=350, placeholder="Paste professional history...")
 with col2:
-    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=350)
+    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=350, placeholder="Paste target requirements...")
 
 # --- 5. STAGE A: AUDIT ---
 if st.button("RUN STRATEGIC AUDIT"):
     if not api_key:
-        st.error("Missing API Key.")
-    elif len(master_cv) < 50:
-        st.warning("Insufficient CV data.")
+        st.error("Missing API Key. Please provide it in the sidebar.")
+    elif len(master_cv) < 50 or len(job_desc) < 50:
+        st.warning("Insufficient data. Please provide more content for analysis.")
     else:
-        with st.spinner("FORCE ACCESSING STABLE API..."):
+        with st.spinner("CONNECTING TO STRATEGIC ENGINE..."):
             try:
-                # THE SILVER BULLET: Force API Version 1 and REST transport
-                genai.configure(
-                    api_key=api_key, 
-                    transport='rest',
-                    client_options={'api_version': 'v1'}
-                )
+                # SIMPLE CONFIGURATION (Transport set to 'rest' for stability)
+                genai.configure(api_key=api_key, transport='rest')
                 
-                # Try the most robust model string
+                # Try creating the model - Using the most stable identifier
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 audit_prompt = f"""
-                Analyze CV vs JD. Output ONLY valid JSON.
+                Analyze the CV vs JD. Output ONLY a valid JSON object.
+                Schema:
                 {{
                     "verdict": {{"level": "string", "score": number, "recommendation": "string"}},
                     "matrix": {{"hierarchy": number, "hard_skills": number, "evidence": number, "soft_skills": number}},
@@ -125,10 +126,16 @@ if st.button("RUN STRATEGIC AUDIT"):
                     st.session_state.audit_json = json.loads(clean_text)
                     st.rerun()
                 else:
-                    st.error("AI node returned no data.")
+                    st.error("Empty response from AI. Possible API restriction.")
                     
             except Exception as e:
-                st.error(f"Critical System Error: {str(e)}")
+                # EXPLANATORY ERROR HANDLING
+                err_msg = str(e)
+                if "404" in err_msg:
+                    st.error("STRATEGIC LINK FAILURE (404): The AI Model identifier has moved. Attempting recovery...")
+                    st.info("Try using 'gemini-1.5-flash-latest' if this persists.")
+                else:
+                    st.error(f"Audit System Offline: {err_msg}")
 
 # --- 6. DASHBOARD ---
 if st.session_state.audit_json:
@@ -143,24 +150,24 @@ if st.session_state.audit_json:
 
     st.markdown(f"""
     <div class="report-card">
-        <h3 style="color: #00FBFF;">Verdict: {res['verdict']['level']} ({res['verdict']['score']}/100)</h3>
-        <p style="color: #00FBFF;"><strong>Strategy:</strong> {res['pivot']}</p>
+        <h3 style="color: #00FBFF; margin-top:0;">Verdict: {res['verdict']['level']} ({res['verdict']['score']}/100)</h3>
+        <p style="color: #00FBFF;"><strong>Proposed Strategy:</strong> {res['pivot']}</p>
         <p><i>{res['verdict']['recommendation']}</i></p>
-        <p style="color: #94A3B8;"><strong>Gaps:</strong> {", ".join(res['missing'])}</p>
+        <p style="color: #94A3B8;"><strong>Critical Gaps:</strong> {", ".join(res['missing'])}</p>
     </div>
     """, unsafe_allow_html=True)
 
     st.divider()
 
     # --- 7. STAGE B: SYNTHESIS ---
-    if st.button("CONSTRUCT PORTFOLIO"):
-        with st.spinner("Synthesizing..."):
+    if st.button("CONSTRUCT EXECUTIVE PORTFOLIO"):
+        with st.spinner("Synthesizing Executive Narrative..."):
             try:
-                # Force stable version for Pro as well
                 model_pro = genai.GenerativeModel('gemini-1.5-pro')
                 arch_prompt = f"Create CV and Cover Letter based on: {json.dumps(res)}. CV Source: {master_cv}. No Oxford commas."
                 final_res = model_pro.generate_content(arch_prompt)
+                st.markdown("## 🖋️ TAILOR-MADE PORTFOLIO")
                 st.markdown(final_res.text)
-                st.download_button("Download TXT", final_res.text, file_name="portfolio.txt")
+                st.download_button("Download TXT", final_res.text, file_name="executive_portfolio.txt")
             except Exception as e:
                 st.error(f"Synthesis Error: {str(e)}")
