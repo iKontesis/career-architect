@@ -247,4 +247,4 @@ with tab_portfolio:
 
 # --- FOOTER ---
 st.divider()
-st.caption("v3.1.1 • Agnostic • Native Structured Output • Fixed 0-100 scores • No data stored • Powered by Gemini 3 Flash Preview")
+st.caption("v3.1.1 • Industry/Level/Experience Agnostic • Native Structured Output • No data stored • Powered by Gemini 3 Flash Preview")
