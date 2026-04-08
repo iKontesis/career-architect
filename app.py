@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 from google import genai
-from google.genai.types import Schema, Type  # για native schema
+from google.genai.types import Schema, Type
 
 # --- CONFIG & STYLING (ακριβώς ίδια λιτή αισθητική) ---
 st.set_page_config(page_title="Career Strategy Architect", page_icon="🛡️", layout="wide")
@@ -17,7 +17,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🛡️ CAREER STRATEGY ARCHITECT")
-st.subheader("v3.1.0 – Industry / Level / Experience Agnostic")
+st.subheader("v3.1.1 – Industry / Level / Experience Agnostic")
 st.caption("High-Fidelity Semantic Audit • Native Structured Output • ATS + Realistic Gaps")
 
 # --- SIDEBAR ---
@@ -26,7 +26,7 @@ with st.sidebar:
     api_key = st.secrets.get("GEMINI_API_KEY")
     if api_key and len(api_key) > 30:
         st.success("✅ Strategic Core: ONLINE")
-        st.caption("Gemini 3 Flash Preview • Stateless • v3.1.0")
+        st.caption("Gemini 3 Flash Preview • Stateless • v3.1.1")
     else:
         st.error("❌ Strategic Core: OFFLINE")
     
@@ -39,7 +39,7 @@ for key in ["audit_json", "portfolio_text", "cv_format"]:
     if key not in st.session_state:
         st.session_state[key] = None
 
-# --- TABS για multi-step workflow ---
+# --- TABS ---
 tab_audit, tab_portfolio = st.tabs(["📊 STRATEGIC AUDIT", "🖋️ EXECUTIVE PORTFOLIO"])
 
 with tab_audit:
@@ -63,7 +63,7 @@ with tab_audit:
                 try:
                     client = genai.Client(api_key=api_key)
 
-                    # === NATIVE JSON SCHEMA (2026 best practice) ===
+                    # === NATIVE JSON SCHEMA με enforced 0-100 για ποσοστά (μόνο εδώ η αλλαγή) ===
                     audit_schema = Schema(
                         type=Type.OBJECT,
                         properties={
@@ -74,16 +74,16 @@ with tab_audit:
                             }),
                             "verdict": Schema(type=Type.OBJECT, properties={
                                 "level": Schema(type=Type.STRING),
-                                "score": Schema(type=Type.INTEGER),
+                                "score": Schema(type=Type.INTEGER, minimum=0, maximum=100),
                                 "recommendation": Schema(type=Type.STRING)
                             }),
                             "matrix": Schema(type=Type.OBJECT, properties={
-                                "hierarchy": Schema(type=Type.INTEGER),
-                                "hard_skills": Schema(type=Type.INTEGER),
-                                "evidence": Schema(type=Type.INTEGER),
-                                "soft_skills": Schema(type=Type.INTEGER),
-                                "ats_compatibility": Schema(type=Type.INTEGER),
-                                "keyword_match": Schema(type=Type.INTEGER)
+                                "hierarchy": Schema(type=Type.INTEGER, minimum=0, maximum=100),
+                                "hard_skills": Schema(type=Type.INTEGER, minimum=0, maximum=100),
+                                "evidence": Schema(type=Type.INTEGER, minimum=0, maximum=100),
+                                "soft_skills": Schema(type=Type.INTEGER, minimum=0, maximum=100),
+                                "ats_compatibility": Schema(type=Type.INTEGER, minimum=0, maximum=100),
+                                "keyword_match": Schema(type=Type.INTEGER, minimum=0, maximum=100)
                             }),
                             "pivot": Schema(type=Type.STRING),
                             "gaps": Schema(type=Type.ARRAY, items=Schema(type=Type.OBJECT, properties={
@@ -106,6 +106,10 @@ First detect: industry, seniority level, required years from JD.
 
 Then analyse CV vs JD and return ONLY valid JSON matching the schema.
 
+IMPORTANT SCORING RULES (must be followed exactly):
+- All scores in "matrix" (hierarchy, hard_skills, evidence, soft_skills, ats_compatibility, keyword_match) MUST be integers 0-100.
+- 100 = perfect match, 0 = no match at all.
+
 CV:
 {master_cv}
 
@@ -126,24 +130,22 @@ JD:
 
                     st.session_state.audit_json = parsed
                     st.session_state.portfolio_text = None
-                    st.success("✅ Strategic Audit completed (native schema)!")
+                    st.success("✅ Strategic Audit completed (native schema v3.1.1)!")
                     st.rerun()
 
                 except Exception as e:
                     st.error(f"Audit failed: {str(e)[:250]}")
 
-    # --- DISPLAY AUDIT RESULTS ---
+    # --- DISPLAY AUDIT RESULTS (ακριβώς ίδιο με v3.1.0) ---
     if st.session_state.audit_json:
         res = st.session_state.audit_json
         m = res.get("matrix", {})
 
         st.markdown("## 📊 EXECUTIVE INTELLIGENCE REPORT")
 
-        # Dynamic detector
         det = res.get("detected", {})
         st.info(f"**Detected:** {det.get('industry','N/A')} • {det.get('level','N/A')} • {det.get('required_years','N/A')} years")
 
-        # Metrics
         c1, c2, c3, c4, c5, c6 = st.columns(6)
         c1.metric("HIERARCHY", f"{m.get('hierarchy',0)}%")
         c2.metric("HARD SKILLS", f"{m.get('hard_skills',0)}%")
@@ -152,7 +154,6 @@ JD:
         c5.metric("ATS", f"{m.get('ats_compatibility',0)}%")
         c6.metric("KEYWORDS", f"{m.get('keyword_match',0)}%")
 
-        # Verdict + Pivot
         verdict = res.get("verdict", {})
         col_l, col_r = st.columns([2, 1])
         with col_l:
@@ -170,7 +171,6 @@ JD:
             </div>
             """, unsafe_allow_html=True)
 
-        # Gaps + Roadmap
         st.markdown("### 🔴 Critical Gaps")
         for g in res.get("gaps", []):
             sev = g.get("severity", 3)
@@ -194,7 +194,6 @@ JD:
             st.markdown("### 🔄 Transferable Skills Bridge")
             st.info(res["transferable_bridge"])
 
-        # --- PORTFOLIO BUTTON ---
         cv_format = st.toggle("Hybrid CV format (instead of pure Chronological)", value=False, key="cv_format_toggle")
         st.session_state.cv_format = "Hybrid" if cv_format else "Chronological"
 
@@ -239,7 +238,7 @@ with tab_portfolio:
         st.download_button(
             label="📥 Download as TXT",
             data=st.session_state.portfolio_text,
-            file_name="Executive_Portfolio_v3.1.0.txt",
+            file_name="Executive_Portfolio_v3.1.1.txt",
             mime="text/plain",
             use_container_width=True
         )
@@ -248,4 +247,4 @@ with tab_portfolio:
 
 # --- FOOTER ---
 st.divider()
-st.caption("v3.1.0 • Agnostic • Native Structured Output • No data stored • Powered by Gemini 3 Flash Preview")
+st.caption("v3.1.1 • Agnostic • Native Structured Output • Fixed 0-100 scores • No data stored • Powered by Gemini 3 Flash Preview")
