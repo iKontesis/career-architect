@@ -1,13 +1,10 @@
 import streamlit as st
 import json
 from google import genai
+from google.genai.types import Schema, Type  # για native schema
 
-# --- CONFIG & STYLING ---
-st.set_page_config(
-    page_title="Career Strategy Architect",
-    page_icon="🛡️",
-    layout="wide"
-)
+# --- CONFIG & STYLING (ακριβώς ίδια λιτή αισθητική) ---
+st.set_page_config(page_title="Career Strategy Architect", page_icon="🛡️", layout="wide")
 
 st.markdown("""
     <style>
@@ -20,91 +17,94 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🛡️ CAREER STRATEGY ARCHITECT")
-st.subheader("High-Fidelity Semantic Audit & Executive Portfolio Synthesis")
+st.subheader("v3.1.0 – Industry / Level / Experience Agnostic")
+st.caption("High-Fidelity Semantic Audit • Native Structured Output • ATS + Realistic Gaps")
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("⚙️ ENGINE STATUS")
     api_key = st.secrets.get("GEMINI_API_KEY")
-    
     if api_key and len(api_key) > 30:
         st.success("✅ Strategic Core: ONLINE")
-        st.caption("Using owner's Gemini API Key (stateless)")
+        st.caption("Gemini 3 Flash Preview • Stateless • v3.1.0")
     else:
         st.error("❌ Strategic Core: OFFLINE")
-        st.warning("GEMINI_API_KEY is missing in Streamlit Secrets.")
     
     st.divider()
-    st.markdown("""
-    **Ioannis Kontesis**  
-    AI Transformation Architect  
-    Operational Resilience & Strategy Specialist  
-    Finance & Risk Professional
-    
-    🔗 [LinkedIn](https://linkedin.com/in/ikontesis) | [𝕏](https://x.com/@ikontesis)
-    
-    🛡️ Stateless Architecture | **v2.5.2**  
-    Powered by Google GenAI SDK
-    """)
+    st.markdown("**Ioannis Kontesis**  \nAI Transformation Architect  \nOperational Resilience & Strategy Specialist")
+    st.caption("100% Stateless | Your data never stored")
 
 # --- SESSION STATE ---
-if 'audit_json' not in st.session_state:
-    st.session_state.audit_json = None
-if 'portfolio_text' not in st.session_state:
-    st.session_state.portfolio_text = None
+for key in ["audit_json", "portfolio_text", "cv_format"]:
+    if key not in st.session_state:
+        st.session_state[key] = None
 
-# --- INPUTS ---
-col1, col2 = st.columns(2)
-with col1:
-    master_cv = st.text_area("📄 MASTER CV SOURCE (English)", height=420, 
-                             placeholder="Paste your full master CV here...")
-with col2:
-    job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=420, 
-                            placeholder="Paste the full job description here...")
+# --- TABS για multi-step workflow ---
+tab_audit, tab_portfolio = st.tabs(["📊 STRATEGIC AUDIT", "🖋️ EXECUTIVE PORTFOLIO"])
 
-st.divider()
+with tab_audit:
+    col1, col2 = st.columns(2)
+    with col1:
+        master_cv = st.text_area("📄 MASTER CV SOURCE", height=380, 
+                                placeholder="Paste full CV (English or Greek OK)...")
+    with col2:
+        job_desc = st.text_area("💼 TARGET JOB DESCRIPTION", height=380, 
+                               placeholder="Paste full JD...")
 
-# --- RUN STRATEGIC AUDIT ---
-if st.button("🚀 RUN STRATEGIC AUDIT", type="primary", use_container_width=True):
-    if not api_key or len(api_key) < 30:
-        st.error("**System Error:** GEMINI_API_KEY is not configured in Streamlit Secrets.")
-    elif len(master_cv.strip()) < 150 or len(job_desc.strip()) < 150:
-        st.warning("Please provide sufficient data for both CV and Job Description.")
-    else:
-        with st.spinner("Executing Strategic Semantic Audit..."):
-            try:
-                client = genai.Client(api_key=api_key)
+    st.divider()
 
-                audit_prompt = f"""
-You are a strict, high-precision executive career auditor.
+    if st.button("🚀 RUN STRATEGIC AUDIT", type="primary", use_container_width=True):
+        if not api_key or len(api_key) < 30:
+            st.error("GEMINI_API_KEY missing in secrets.")
+        elif len(master_cv.strip()) < 100 or len(job_desc.strip()) < 100:
+            st.warning("Both fields required.")
+        else:
+            with st.spinner("Executing native structured semantic audit..."):
+                try:
+                    client = genai.Client(api_key=api_key)
 
-Analyze the CV against the JD and return **ONLY** valid JSON with this exact structure:
+                    # === NATIVE JSON SCHEMA (2026 best practice) ===
+                    audit_schema = Schema(
+                        type=Type.OBJECT,
+                        properties={
+                            "detected": Schema(type=Type.OBJECT, properties={
+                                "industry": Schema(type=Type.STRING),
+                                "level": Schema(type=Type.STRING),
+                                "required_years": Schema(type=Type.INTEGER)
+                            }),
+                            "verdict": Schema(type=Type.OBJECT, properties={
+                                "level": Schema(type=Type.STRING),
+                                "score": Schema(type=Type.INTEGER),
+                                "recommendation": Schema(type=Type.STRING)
+                            }),
+                            "matrix": Schema(type=Type.OBJECT, properties={
+                                "hierarchy": Schema(type=Type.INTEGER),
+                                "hard_skills": Schema(type=Type.INTEGER),
+                                "evidence": Schema(type=Type.INTEGER),
+                                "soft_skills": Schema(type=Type.INTEGER),
+                                "ats_compatibility": Schema(type=Type.INTEGER),
+                                "keyword_match": Schema(type=Type.INTEGER)
+                            }),
+                            "pivot": Schema(type=Type.STRING),
+                            "gaps": Schema(type=Type.ARRAY, items=Schema(type=Type.OBJECT, properties={
+                                "gap": Schema(type=Type.STRING),
+                                "severity": Schema(type=Type.INTEGER)
+                            })),
+                            "roadmap": Schema(type=Type.ARRAY, items=Schema(type=Type.STRING)),
+                            "risk_flags": Schema(type=Type.ARRAY, items=Schema(type=Type.STRING)),
+                            "transferable_bridge": Schema(type=Type.STRING, nullable=True)
+                        },
+                        required=["detected", "verdict", "matrix", "pivot", "gaps"]
+                    )
 
-{{
-  "verdict": {{
-    "level": "string (e.g. Senior Manager / Principal Consultant)",
-    "score": integer (0-100),
-    "recommendation": "short, direct recommendation"
-  }},
-  "matrix": {{
-    "hierarchy": integer (0-100),
-    "hard_skills": integer (0-100),
-    "evidence": integer (0-100),
-    "soft_skills": integer (0-100)
-  }},
-  "pivot": "2-3 sentence strategic narrative",
-  "gaps": [
-    {{"gap": "very specific gap description", "severity": integer (1-5)}}
-  ]
-}}
+                    audit_prompt = f"""
+You are a strict, high-precision executive career auditor. 
+NEVER invent experience. Map ONLY what exists in the Master CV.
+If no direct evidence → write exactly "No direct evidence".
 
-Scoring rules (be ruthless and realistic):
-- 90+ = exceptional fit
-- 75-89 = strong fit with minor gaps
-- 60-74 = good but needs work
-- <60 = significant gaps
+First detect: industry, seniority level, required years from JD.
 
-Severity: 1 = minor or already covered, 5 = critical blocker.
+Then analyse CV vs JD and return ONLY valid JSON matching the schema.
 
 CV:
 {master_cv}
@@ -113,143 +113,125 @@ JD:
 {job_desc}
 """
 
-                response = client.models.generate_content(
-                    model="gemini-3-flash-preview",
-                    contents=audit_prompt,
-                    config={"response_mime_type": "application/json"}
-                )
+                    response = client.models.generate_content(
+                        model="gemini-3-flash-preview",
+                        contents=audit_prompt,
+                        config={
+                            "response_mime_type": "application/json",
+                            "response_json_schema": audit_schema
+                        }
+                    )
 
-                parsed = json.loads(response.text)
+                    parsed = json.loads(response.text)
 
-                # Defensive fix για matrix (για να μην μένουν 5%)
-                matrix = parsed.get("matrix", {})
-                if not isinstance(matrix, dict) or len(matrix) != 4:
-                    matrix = {"hierarchy": 65, "hard_skills": 78, "evidence": 92, "soft_skills": 85}
+                    st.session_state.audit_json = parsed
+                    st.session_state.portfolio_text = None
+                    st.success("✅ Strategic Audit completed (native schema)!")
+                    st.rerun()
 
-                st.session_state.audit_json = {
-                    "verdict": parsed.get("verdict", {}),
-                    "matrix": matrix,
-                    "pivot": parsed.get("pivot", ""),
-                    "gaps": parsed.get("gaps", [])
-                }
+                except Exception as e:
+                    st.error(f"Audit failed: {str(e)[:250]}")
 
-                st.session_state.portfolio_text = None
-                st.success("✅ Strategic Audit completed!")
-                st.rerun()
+    # --- DISPLAY AUDIT RESULTS ---
+    if st.session_state.audit_json:
+        res = st.session_state.audit_json
+        m = res.get("matrix", {})
 
-            except Exception as e:
-                error_str = str(e).lower()
-                if "429" in error_str or "quota" in error_str or "rate limit" in error_str:
-                    st.error("⛔ Rate limit / Quota exceeded")
-                    st.warning("This app uses the owner's personal Gemini API key. Please wait 60–90 seconds and try again.")
-                else:
-                    st.error(f"Audit failed: {str(e)[:300]}")
+        st.markdown("## 📊 EXECUTIVE INTELLIGENCE REPORT")
 
-# --- EXECUTIVE DASHBOARD ---
-if st.session_state.audit_json:
-    res = st.session_state.audit_json
-    verdict = res.get("verdict", {})
-    matrix = res.get("matrix", {})
+        # Dynamic detector
+        det = res.get("detected", {})
+        st.info(f"**Detected:** {det.get('industry','N/A')} • {det.get('level','N/A')} • {det.get('required_years','N/A')} years")
 
-    st.markdown("## 📊 EXECUTIVE INTELLIGENCE REPORT")
+        # Metrics
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
+        c1.metric("HIERARCHY", f"{m.get('hierarchy',0)}%")
+        c2.metric("HARD SKILLS", f"{m.get('hard_skills',0)}%")
+        c3.metric("EVIDENCE", f"{m.get('evidence',0)}%")
+        c4.metric("SOFT SKILLS", f"{m.get('soft_skills',0)}%")
+        c5.metric("ATS", f"{m.get('ats_compatibility',0)}%")
+        c6.metric("KEYWORDS", f"{m.get('keyword_match',0)}%")
 
-    # Top 4 Metrics
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("HIERARCHY", f"{matrix.get('hierarchy', 0)}%")
-    m2.metric("HARD SKILLS", f"{matrix.get('hard_skills', 0)}%")
-    m3.metric("EVIDENCE", f"{matrix.get('evidence', 0)}%")
-    m4.metric("SOFT SKILLS", f"{matrix.get('soft_skills', 0)}%")
-
-    st.divider()
-
-    col_l, col_r = st.columns([2, 1])
-
-    with col_l:
-        st.markdown(f"""
-        <div class="report-card">
-            <h2>Verdict: <strong>{verdict.get('level', 'N/A')}</strong> ({verdict.get('score', 0)}/100)</h2>
-            <p style="color:#94A3B8; font-size:1.05rem;">{verdict.get('recommendation', 'N/A')}</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_r:
-        st.markdown(f"""
-        <div class="report-card" style="height:100%;">
-            <h3>Strategic Pivot</h3>
-            <p style="line-height:1.6;">{res.get('pivot', 'N/A')}</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # Critical Gaps
-    st.markdown("### 🔴 Critical Gaps")
-    gaps = res.get("gaps", [])
-    if gaps:
-        for g in gaps:
-            sev = int(g.get("severity", 3))
-            color = "#EF4444" if sev >= 4 else "#F59E0B" if sev == 3 else "#94A3B8"
+        # Verdict + Pivot
+        verdict = res.get("verdict", {})
+        col_l, col_r = st.columns([2, 1])
+        with col_l:
             st.markdown(f"""
-            <div class="gap-item" style="border-left-color:{color};">
-                <strong>{g.get('gap', 'Gap not specified')}</strong>
-                <span style="float:right; color:{color}; font-weight:700;">Severity: {sev}/5</span>
+            <div class="report-card">
+                <h2>Verdict: <strong>{verdict.get('level','N/A')}</strong> ({verdict.get('score',0)}/100)</h2>
+                <p>{verdict.get('recommendation','N/A')}</p>
             </div>
             """, unsafe_allow_html=True)
-    else:
-        st.success("✅ No critical gaps identified.")
+        with col_r:
+            st.markdown(f"""
+            <div class="report-card" style="height:100%;">
+                <h3>Strategic Pivot</h3>
+                <p>{res.get('pivot','N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-    st.divider()
+        # Gaps + Roadmap
+        st.markdown("### 🔴 Critical Gaps")
+        for g in res.get("gaps", []):
+            sev = g.get("severity", 3)
+            color = "#EF4444" if sev >= 4 else "#F59E0B"
+            st.markdown(f"""
+            <div class="gap-item" style="border-left-color:{color};">
+                <strong>{g.get('gap')}</strong>
+                <span style="float:right; color:{color};">Severity: {sev}/5</span>
+            </div>
+            """, unsafe_allow_html=True)
 
-    # --- CONSTRUCT PORTFOLIO ---
-    if st.button("🖋️ CONSTRUCT EXECUTIVE PORTFOLIO (Tailored CV + Cover Letter)", 
-                 type="primary", use_container_width=True):
-        with st.spinner("Synthesizing highly tailored Executive CV and Cover Letter..."):
-            try:
-                client = genai.Client(api_key=api_key)
+        st.markdown("### 🛠️ Improvement Roadmap")
+        for item in res.get("roadmap", []):
+            st.success(f"• {item}")
 
-                portfolio_prompt = f"""
-You are an elite executive CV writer and cover letter strategist.
+        st.markdown("### ⚠️ Honest Risk Flags")
+        for flag in res.get("risk_flags", []):
+            st.warning(f"• {flag}")
 
-Using ONLY the audit results and the original CV, produce a **highly tailored**:
+        if res.get("transferable_bridge"):
+            st.markdown("### 🔄 Transferable Skills Bridge")
+            st.info(res["transferable_bridge"])
 
-1. Full CV (ATS-friendly markdown, achievement-oriented, keyword-optimized for the JD)
-2. Targeted Cover Letter (1 page, persuasive, addressing every key requirement of the JD)
+        # --- PORTFOLIO BUTTON ---
+        cv_format = st.toggle("Hybrid CV format (instead of pure Chronological)", value=False, key="cv_format_toggle")
+        st.session_state.cv_format = "Hybrid" if cv_format else "Chronological"
 
+        if st.button("🖋️ CONSTRUCT EXECUTIVE PORTFOLIO", type="primary", use_container_width=True):
+            with st.spinner("Synthesizing Tailored CV + Cover Letter..."):
+                try:
+                    client = genai.Client(api_key=api_key)
+                    portfolio_prompt = f"""
+You are an elite executive CV writer.
 Rules:
-- Explicitly map the candidate's experience to the JD requirements.
-- Use the Strategic Pivot as the central theme.
-- Address gaps subtly but honestly.
-- Executive language, no fluff.
+- NEVER invent experience.
+- Use ONLY data from Master CV and Audit Results.
+- CV format requested: {st.session_state.cv_format}
+- Include "Why this role" paragraph in Cover Letter using ONLY JD + CV evidence.
 
-Audit Results:
-{json.dumps(res, indent=2)}
+Audit Results: {json.dumps(res, ensure_ascii=False)}
+Master CV: {master_cv}
+Job Description: {job_desc}
 
-Original Master CV:
-{master_cv}
-
-Target Job Description:
-{job_desc}
-
-Output exactly this format:
-
+Output exactly:
 === TAILORED CV ===
 [full CV]
 
 === COVER LETTER ===
 [full cover letter]
 """
+                    response = client.models.generate_content(
+                        model="gemini-3-flash-preview",
+                        contents=portfolio_prompt
+                    )
+                    st.session_state.portfolio_text = response.text
+                    st.success("✅ Portfolio generated!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Portfolio failed: {str(e)[:200]}")
 
-                response = client.models.generate_content(
-                    model="gemini-3-flash-preview",
-                    contents=portfolio_prompt
-                )
-
-                st.session_state.portfolio_text = response.text
-                st.success("✅ Executive Portfolio generated!")
-                st.rerun()
-
-            except Exception as e:
-                st.error(f"Portfolio synthesis failed: {str(e)[:250]}")
-
-    # Display Portfolio
+with tab_portfolio:
     if st.session_state.portfolio_text:
         st.markdown("## 🖋️ YOUR TAILOR-MADE EXECUTIVE PORTFOLIO")
         st.markdown(st.session_state.portfolio_text)
@@ -257,11 +239,13 @@ Output exactly this format:
         st.download_button(
             label="📥 Download as TXT",
             data=st.session_state.portfolio_text,
-            file_name="Executive_Portfolio_CV_CoverLetter.txt",
+            file_name="Executive_Portfolio_v3.1.0.txt",
             mime="text/plain",
             use_container_width=True
         )
+    else:
+        st.info("Run Audit first, then generate Portfolio.")
 
 # --- FOOTER ---
 st.divider()
-st.caption("Developed by Ioannis Kontesis • 100% Stateless • Your data is never stored • Powered by Gemini 3 Flash Preview • v2.5.2")
+st.caption("v3.1.0 • Agnostic • Native Structured Output • No data stored • Powered by Gemini 3 Flash Preview")
