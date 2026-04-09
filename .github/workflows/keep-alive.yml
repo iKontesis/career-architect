@@ -1,0 +1,28 @@
+name: Keep Streamlit App Awake
+
+on:
+  schedule:
+    - cron: '0 */10 * * *'      # Κάθε 10 ώρες
+  workflow_dispatch:            # Χειροκίνητο run
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update timestamp
+        run: |
+          mkdir -p .streamlit
+          echo "Last keep-alive: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" > .streamlit/keepalive.txt
+
+      - name: Commit and Force Push
+        run: |
+          git config --global user.name "KeepAlive Bot"
+          git config --global user.email "keepalive@ikontesis.dev"
+          git add .streamlit/keepalive.txt
+          git commit -m "chore: automated keep-alive" || echo "No changes"
+          git push --force
