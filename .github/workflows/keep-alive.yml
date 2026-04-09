@@ -5,6 +5,9 @@ on:
     - cron: '0 */10 * * *'      # Κάθε 10 ώρες
   workflow_dispatch:            # Χειροκίνητο run
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Διόρθωση για το Node.js warning
+
 jobs:
   keep-alive:
     runs-on: ubuntu-latest
